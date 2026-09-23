@@ -5,9 +5,10 @@
  * See research-crew-v2-build-spec.md §5.
  */
 
-export type SourceId = 'shopify' | 'klaviyo' | 'sms' | 'meta' | 'tiktok' | 'tiktokshop' | 'skio';
+export type SourceId = 'shopify' | 'klaviyo' | 'sms' | 'meta' | 'tiktok' | 'tiktokshop' | 'skio' | 'gorgias' | 'okendo' | 'storefront';
 
-export const SOURCE_IDS: readonly SourceId[] = ['shopify', 'klaviyo', 'sms', 'meta', 'tiktok', 'tiktokshop', 'skio'];
+/** Sources the merchant can toggle on Connect. The storefront is public and always on. */
+export const SOURCE_IDS: readonly SourceId[] = ['shopify', 'klaviyo', 'sms', 'meta', 'tiktok', 'tiktokshop', 'skio', 'gorgias', 'okendo'];
 
 export interface RunBrief {
   question: string;

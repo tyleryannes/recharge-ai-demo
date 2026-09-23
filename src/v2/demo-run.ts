@@ -34,6 +34,10 @@ import type {
   TestPlan,
 } from './types.js';
 import { WEB_FINDINGS, type WebFinding } from './web-corpus.js';
+import { buildAnalytics, buildScorecard, buildStrategy } from '../v3/analytics.js';
+import { buildPackages } from '../v3/builds.js';
+import type { Ctx } from '../v3/ctx.js';
+import { JOURNEY_AGENTS, buildJourneys } from '../v3/journeys.js';
 
 export const MODELS = { top: 'claude-opus-5-5', mid: 'claude-sonnet-5', fast: 'claude-haiku-4-5' };
 
@@ -68,6 +72,10 @@ const AUDITORS: Auditor[] = [
       { source: 'shopify', tool: 'get_repurchase_rates', args: { window: '90d' } },
       { source: 'shopify', tool: 'get_repurchase_rates', args: { window: '12m' } },
       { source: 'shopify', tool: 'get_cohorts' },
+      ...['all', 'mobile', 'desktop'].map((device) => ({ source: 'shopify' as SourceId, tool: 'get_funnel', args: { device } })),
+      { source: 'shopify', tool: 'get_margins' },
+      { source: 'shopify', tool: 'get_channel_performance' },
+      { source: 'shopify', tool: 'get_cohort_ltv' },
     ],
   },
   {
@@ -114,6 +122,16 @@ const AUDITORS: Auditor[] = [
       { source: 'skio', tool: 'get_skip_swap_usage' },
       { source: 'skio', tool: 'get_dunning_performance' },
       { source: 'skio', tool: 'get_ltv_comparison' },
+      { source: 'skio', tool: 'get_quick_actions' },
+    ],
+  },
+  {
+    id: 'audit-cx', label: 'Support & reviews', area: 'Support & reviews', sources: ['gorgias', 'okendo'], model: MODELS.mid,
+    task: 'Ticket volume and reasons, how subscription requests are handled, review themes',
+    calls: [
+      { source: 'gorgias', tool: 'get_ticket_summary' },
+      { source: 'gorgias', tool: 'get_ticket_reasons' },
+      { source: 'okendo', tool: 'get_review_summary' },
     ],
   },
   {
@@ -133,7 +151,8 @@ export function buildDemoRun(runId: string, brief: RunBrief, opts: DemoRunOption
   const events: { body: RunEventBody; t: number; order: number }[] = [];
   let order = 0;
   const at = (t: number, body: RunEventBody) => events.push({ body, t: Math.round(t), order: order++ });
-  const has = (s: SourceId) => !!brief.sources[s];
+  // The storefront is public: every run can look at it.
+  const has = (s: SourceId) => s === 'storefront' || !!brief.sources[s];
   const ledger = new Ledger();
   const asOf = fixture.store.asOf;
 
@@ -192,18 +211,22 @@ export function buildDemoRun(runId: string, brief: RunBrief, opts: DemoRunOption
   at(0, { type: 'agent.completed', agentId: 'intake', durationMs: 0, usage: usage(0, 0, 0, 0) });
 
   const auditors = AUDITORS.map<AgentDescriptor>((a) => ({ id: a.id, stage: 'audit', label: a.label, task: a.task, dependsOn: ['intake'], model: a.model }));
-  const auditAssembly: AgentDescriptor = { id: 'audit-assembly', stage: 'audit-assembly', label: 'Store audit', task: 'Assembling the Store Profile, contradictions between sources, and what research should look up', dependsOn: auditors.map((a) => a.id), model: MODELS.top };
+  const journeyAgents = JOURNEY_AGENTS.map<AgentDescriptor>((j) => ({ id: j.id, stage: 'journeys', label: j.label, task: j.task, dependsOn: ['intake'], model: MODELS.mid }));
+  const auditAssembly: AgentDescriptor = { id: 'audit-assembly', stage: 'audit-assembly', label: 'Store audit', task: 'Assembling the Store Profile, contradictions between sources, and what research should look up', dependsOn: [...auditors.map((a) => a.id), ...journeyAgents.map((a) => a.id)], model: MODELS.top };
   const researchers: AgentDescriptor[] = [
     { id: 'research-benchmarks', stage: 'research', label: 'Benchmarks', task: 'Benchmarks and best practice for exactly the gaps the audit found', dependsOn: ['audit-assembly'], model: MODELS.top },
     { id: 'research-competitors', stage: 'research', label: 'Competitors', task: `What ${competitorNames.length ? list(competitorNames) : 'named competitors'} do to acquire and keep subscribers`, dependsOn: ['audit-assembly'], model: MODELS.top },
     { id: 'research-trends', stage: 'research', label: 'Consumer trends', task: 'Category behaviour, seasonality and the pricing climate', dependsOn: ['audit-assembly'], model: MODELS.top },
   ];
   const oppAssembly: AgentDescriptor = { id: 'opportunity-assembly', stage: 'opportunities', label: 'Opportunities', task: 'Joining store data with research into store-vs-benchmark gaps', dependsOn: researchers.map((r) => r.id), model: MODELS.top };
-  const prioritiser: AgentDescriptor = { id: 'prioritiser', stage: 'prioritise', label: 'Prioritiser', task: 'Scoring and ranking opportunities with the maths shown', dependsOn: ['opportunity-assembly'], model: MODELS.top };
+  const analyst: AgentDescriptor = { id: 'growth-analyst', stage: 'opportunities', label: 'Growth analyst', task: 'Funnel, unit economics, payback, channel economics and a health scorecard', dependsOn: researchers.map((r) => r.id), model: MODELS.top };
+  const strategist: AgentDescriptor = { id: 'sub-strategist', stage: 'opportunities', label: 'Subscription strategist', task: 'How subscriptions should run through every tool in the stack', dependsOn: researchers.map((r) => r.id), model: MODELS.top };
+  const prioritiser: AgentDescriptor = { id: 'prioritiser', stage: 'prioritise', label: 'Prioritiser', task: 'Scoring and ranking opportunities with the maths shown', dependsOn: ['opportunity-assembly', 'growth-analyst', 'sub-strategist'], model: MODELS.top };
   const planner: AgentDescriptor = { id: 'planner', stage: 'plan', label: 'Planner', task: 'Action plans, test designs and a 30/60/90 roadmap', dependsOn: ['prioritiser'], model: MODELS.top };
-  const factcheck: AgentDescriptor = { id: 'factcheck', stage: 'factcheck', label: 'Fact-check', task: 'Checking web claims against sources and recomputing data claims from the ledger', dependsOn: ['planner'], model: MODELS.mid };
+  const buildKits: AgentDescriptor = { id: 'build-kits', stage: 'plan', label: 'Build kits', task: 'Full email and SMS copy, Skio setup, A/B tests and tracking for each move', dependsOn: ['prioritiser'], model: MODELS.top };
+  const factcheck: AgentDescriptor = { id: 'factcheck', stage: 'factcheck', label: 'Fact-check', task: 'Checking web claims against sources and recomputing data claims from the ledger', dependsOn: ['planner', 'build-kits'], model: MODELS.mid };
   const report: AgentDescriptor = { id: 'report', stage: 'report', label: 'Final plan', task: 'Summary, store context, ranked plan, test plan and sources', dependsOn: ['factcheck'] };
-  for (const a of [...auditors, auditAssembly, ...researchers, oppAssembly, prioritiser, planner, factcheck, report]) q(a);
+  for (const a of [...auditors, ...journeyAgents, auditAssembly, ...researchers, oppAssembly, analyst, strategist, prioritiser, planner, buildKits, factcheck, report]) q(a);
 
   // ---------------- audit: schedule every store-tool call, then run them in time order ----------------
   interface Pull extends Call { t: number; agentId: string; callId: string; ledgerIds?: string[] }
@@ -220,6 +243,17 @@ export function buildDemoRun(runId: string, brief: RunBrief, opts: DemoRunOption
       t += 5_600 + ((i * 7 + j * 5) % 5) * 900;
     });
     auditorEnd.set(a.id, calls.length ? t + 7_500 : start + 3_000);
+  });
+  JOURNEY_AGENTS.forEach((j, i) => {
+    const start = 1_500 + i * 600;
+    at(start, { type: 'agent.started', agentId: j.id });
+    const calls = j.calls.filter((c) => has(c.source));
+    let t = start + 3_000;
+    calls.forEach((c, k) => {
+      pulls.push({ ...c, t, agentId: j.id, callId: `call_${++callN}` });
+      t += 6_400 + ((i * 3 + k * 7) % 4) * 1_100;
+    });
+    auditorEnd.set(j.id, t + 9_000);
   });
   const f2Enabled = has('tiktokshop');
 
@@ -386,6 +420,31 @@ export function buildDemoRun(runId: string, brief: RunBrief, opts: DemoRunOption
     });
   }
 
+  // Support & reviews
+  if (has('gorgias') || has('okendo')) {
+    const f: AuditFinding[] = [];
+    if (has('gorgias')) {
+      const subShare = V('gorgias.get_ticket_reasons.change_skip') + V('gorgias.get_ticket_reasons.cancel_request');
+      f.push(finding(`${pct(subShare, 0)} of ${count(V('gorgias.get_ticket_summary.tickets'))} tickets a month are subscription changes or cancel requests ${R('gorgias.get_ticket_reasons.change_skip')}${R('gorgias.get_ticket_reasons.cancel_request')}${R('gorgias.get_ticket_summary.tickets')}: work the portal should be doing.`, 'high', 'Support & reviews'));
+      f.push(finding(`"Where is my order" is the top reason at ${F('gorgias.get_ticket_reasons.wismo')} ${R('gorgias.get_ticket_reasons.wismo')}; first response takes ${F('gorgias.get_ticket_summary.first_response')} ${R('gorgias.get_ticket_summary.first_response')}.`, 'med', 'Support & reviews'));
+      f.push(finding(`Customers rate support ${F('gorgias.get_ticket_summary.csat')} out of 5 ${R('gorgias.get_ticket_summary.csat')}.`, 'low', 'Support & reviews', true));
+    }
+    if (has('okendo')) f.push(finding(`Reviews average ${F('okendo.get_review_summary.rating')}★ across ${count(V('okendo.get_review_summary.reviews'))} reviews ${R('okendo.get_review_summary.rating')}${R('okendo.get_review_summary.reviews')}, but only ${F('okendo.get_review_summary.request_rate')} of orders leave one ${R('okendo.get_review_summary.request_rate')}.`, 'low', 'Support & reviews', true));
+    sections.push({
+      area: 'Support & reviews', agentId: 'audit-cx', source: (['gorgias', 'okendo'] as SourceId[]).filter(has),
+      headline: has('gorgias') ? `Support is doing the portal's job: ${pct(V('gorgias.get_ticket_reasons.change_skip') + V('gorgias.get_ticket_reasons.cancel_request'), 0)} of tickets are subscription requests ${R('gorgias.get_ticket_reasons.change_skip')}.` : `Reviews are a strength: ${F('okendo.get_review_summary.rating')}★ ${R('okendo.get_review_summary.rating')}.`,
+      tiles: tiles(
+        tile('Tickets a month', 'gorgias.get_ticket_summary.tickets'),
+        tile('Change or skip requests', 'gorgias.get_ticket_reasons.change_skip'),
+        tile('Cancel requests', 'gorgias.get_ticket_reasons.cancel_request'),
+        tile('CSAT', 'gorgias.get_ticket_summary.csat'),
+        tile('Average rating', 'okendo.get_review_summary.rating'),
+        tile('Reviews', 'okendo.get_review_summary.reviews'),
+      ),
+      findings: f,
+    });
+  }
+
   // Stack
   const syncOff = R('shopify.get_installed_apps.skio_klaviyo_sync');
   sections.push({
@@ -405,14 +464,15 @@ export function buildDemoRun(runId: string, brief: RunBrief, opts: DemoRunOption
 
   // Audit timelines, narration and findings
   const narration: Record<string, { think: string; text: string; skipped?: string }> = {
-    'audit-analytics': { think: 'Start with the store profile for the denominators, then repurchase at 90 days and 12 months, then cohorts. The question is about subscription, so first-time buyer → subscriber conversion is the number that matters most.', text: `First-time buyers convert to subscription at ${pct(firstToSub)}. Month-1 repeat is sliding cohort by cohort. Q4 is almost a third of the year.` },
+    'audit-analytics': { think: 'Store profile for the denominators, then repurchase, cohorts, the funnel by device, margins and channel economics. The question is about subscription, so first-time buyer → subscriber conversion is the number that matters most.', text: `Phones convert at half the laptop rate. ${pct(firstToSub)} of one-time buyers subscribe later. A $46 order leaves about $18.60 after costs, so repeat orders are where the profit is.` },
     'audit-catalog': { think: 'Check which products can be subscribed to, how long a bag lasts (for timing any replenishment offer), inventory risks, and what sells in which quarter.', text: 'A 12oz bag lasts about 14 days. Guji is about to run out; Decaf is sitting in the warehouse. Cold Brew is a summer product that collapses in Q4.' },
     'audit-lifecycle': { think: 'List the flows first, so I know what exists before pulling performance. Then post-purchase and cart performance, list health, campaigns, then SMS.', text: has('klaviyo') ? 'Three flows live, four standard ones missing. Post-purchase is one email and never mentions subscribing. Cart is the bright spot.' : 'Only SMS to audit.', skipped: 'Klaviyo and Postscript are both switched off for this run, so there is nothing to audit here. Email and SMS recommendations will say "connect to unlock".' },
     'audit-paid': { think: 'Spend and CAC first, then whether Meta buyers become subscribers (UTM-matched to Skio), then creative themes, then TikTok and TikTok Shop.', text: 'Meta is optimised for any purchase and leads with a first-order discount. TikTok Shop is a separate island: buyers never reach email or subscription.', skipped: 'Meta, TikTok Ads and TikTok Shop are all switched off for this run. Paid recommendations are locked.' },
     'audit-subs': { think: 'Subscription summary, churn, then cancel reasons: if one reason dominates, that is the retention lever. Then skip and swap, dunning, and the LTV gap that prices every conversion.', text: 'Churn is 7.8% a month and the biggest cancel reason is oversupply, which the cancel flow answers with a discount. Skip is barely used.', skipped: 'Skio is switched off for this run. Subscriber value will fall back to a benchmark estimate and cancel-flow work is locked.' },
+    'audit-cx': { think: 'Tickets by reason first: how many are really about subscriptions? Then how agents handle them, then what reviews say.', text: 'Almost a third of tickets are subscription changes and cancels that customers could do themselves. Reviews are excellent.', skipped: 'Gorgias and Okendo are switched off for this run, so support and review themes are missing.' },
     'audit-stack': { think: 'Installed apps, then check each pair that the plan might depend on: Skio → Klaviyo, TikTok Shop → Klaviyo.', text: 'Everything needed is installed. The Skio → Klaviyo subscriber sync is off, which blocks any subscribe offer from excluding existing subscribers.' },
   };
-  const auditCost: Record<string, number> = { 'audit-analytics': 0.31, 'audit-catalog': 0.34, 'audit-lifecycle': 0.42, 'audit-paid': 0.29, 'audit-subs': 0.37, 'audit-stack': 0.06 };
+  const auditCost: Record<string, number> = { 'audit-cx': 0.18, 'audit-analytics': 0.31, 'audit-catalog': 0.34, 'audit-lifecycle': 0.42, 'audit-paid': 0.29, 'audit-subs': 0.37, 'audit-stack': 0.06 };
   let auditsDone = 0;
   AUDITORS.forEach((a, i) => {
     const start = 1_200 + i * 450;
@@ -535,7 +595,7 @@ export function buildDemoRun(runId: string, brief: RunBrief, opts: DemoRunOption
       ...(has('tiktokshop') ? [{ kind: 'search', text: 'TikTok Shop buyers move to own site insert card QR subscription', results: [webByKey.get('t_tiktok')!.source] } as Step] : []),
     ],
   };
-  const rCost: Record<string, number> = { 'research-benchmarks': 1.92, 'research-competitors': 1.61, 'research-trends': 1.38 };
+  const rCost: Record<string, number> = { 'research-benchmarks': 1.55, 'research-competitors': 1.35, 'research-trends': 1.38 };
   const rHeadline: Record<string, string> = {
     'research-benchmarks': 'Every gap the audit found has a published range, and the store sits below the bottom of most of them.',
     'research-competitors': picked.some((p) => p === 'Trade Coffee' || p === 'Atlas Coffee Club') ? 'The named competitors make the subscription the first purchase; this store makes it an afterthought.' : 'Competitors make flexibility visible and lead with the subscription.',
@@ -595,7 +655,7 @@ export function buildDemoRun(runId: string, brief: RunBrief, opts: DemoRunOption
     {
       id: 'o1', title: 'Add a subscribe offer to the post-purchase flow', area: 'Email & SMS', goals: ['convert_one_time_to_sub'],
       audience: { value: ftb, display: `${count(ftb)} first-time buyers/month`, ref: R('shopify.get_store_profile.first_time_buyers_per_month') },
-      currentRate: { value: firstToSub, display: pct(firstToSub), ref: R('shopify.get_cohorts.first_to_sub_60d'), note: 'subscribe within 60 days' },
+      currentRate: { value: firstToSub, display: pct(firstToSub), ref: R('shopify.get_cohorts.first_to_sub_60d'), note: 'of one-time buyers subscribe within 60 days' },
       targetRate: { value: 0.07, display: '7%', ref: C('b_pp'), note: 'conservative middle of the 6–9% benchmark' },
       valuePerConversion: valueSubInput,
       rationale: `${count(ftb)} people a month buy for the first time and nothing in email or SMS asks them to subscribe ${R('klaviyo.get_flow_performance.sub_offer', { flowId: 'post_purchase' })}. Brands that ask convert 6–9% ${C('b_pp')}.`,
@@ -678,6 +738,46 @@ export function buildDemoRun(runId: string, brief: RunBrief, opts: DemoRunOption
       requires: ['skio'],
     },
   ];
+  opportunities.push(
+    {
+      id: 'o8', title: 'Make subscribe the default on product pages', area: 'Storefront', goals: ['convert_one_time_to_sub', 'acquire_direct'],
+      audience: { value: ftb, display: `${count(ftb)} first-time buyers/month`, ref: R('shopify.get_store_profile.first_time_buyers_per_month') },
+      currentRate: { value: V('shopify.get_pdp_performance.first_order_sub_share'), display: F('shopify.get_pdp_performance.first_order_sub_share'), ref: R('shopify.get_pdp_performance.first_order_sub_share'), note: 'of first orders are subscriptions' },
+      targetRate: { value: 0.13, display: '13%', ref: C('b_pdp_default'), note: 'below the 15–25% range, to stay conservative; desktop already gets 14%' },
+      valuePerConversion: valueSubInput,
+      rationale: `On a phone, subscribe sits below the fold with one-time preselected ${R('storefront.open_page.sub_default', { path: '/products/house-blend' })}, and ${F('shopify.get_pdp_performance.first_order_sub_share_mobile')} of mobile first orders are subscriptions ${R('shopify.get_pdp_performance.first_order_sub_share_mobile')} vs ${F('shopify.get_pdp_performance.first_order_sub_share_desktop')} on desktop ${R('shopify.get_pdp_performance.first_order_sub_share_desktop')}. Found by the first-time shopper agent.`,
+      citeRefs: [], dataRefs: [],
+      confidence: downgrade('M'), confidenceWhy: 'Desktop already shows the effect on this store; the benchmark range is wide.',
+      effort: 'S', effortWhy: 'Theme and Skio settings; no new tools.',
+      requires: [],
+      overlapNote: 'Overlaps with the post-purchase offer: this converts at checkout, that one after the first order. Each is sized on its own; if both ship, expect some overlap.',
+    },
+    {
+      id: 'o9', title: 'Save cancel requests in Gorgias with Skio macros', area: 'Support', goals: ['reduce_churn'],
+      audience: has('gorgias') ? { value: Math.round(V('gorgias.get_ticket_summary.tickets') * V('gorgias.get_ticket_reasons.cancel_request')), display: `${count(V('gorgias.get_ticket_summary.tickets') * V('gorgias.get_ticket_reasons.cancel_request'))} cancel tickets/month`, ref: `${R('gorgias.get_ticket_summary.tickets')}${R('gorgias.get_ticket_reasons.cancel_request')}` } : { value: 0, display: '—' },
+      currentRate: has('gorgias') ? { value: V('gorgias.get_macros.cancel_ticket_saves'), display: F('gorgias.get_macros.cancel_ticket_saves'), ref: R('gorgias.get_macros.cancel_ticket_saves'), note: 'kept today' } : { value: 0, display: '—' },
+      targetRate: { value: 0.2, display: '20%', ref: C('b_helpdesk'), note: 'bottom of 20–30%' },
+      valuePerConversion: skioOn ? { value: savedValue, display: `$${savedValue} per saved subscriber`, ref: `${R('skio.get_cancel_reasons.saved_extra_orders')}${R('skio.get_subscription_summary.sub_order_value')}` } : { value: 0, display: '—' },
+      rationale: `Agents cancel on request ${R('gorgias.get_macros.cancel_ticket_saves')}. Skio's Gorgias sidebar and a save-first macro change that. Found by the subscriber agent.`,
+      citeRefs: [], dataRefs: [],
+      confidence: 'M', confidenceWhy: 'Benchmark from helpdesk programmes; tone of the macro matters.',
+      effort: 'S', effortWhy: 'Two macros, a rule and a sidebar app.',
+      requires: ['gorgias', 'skio'],
+    },
+    {
+      id: 'o10', title: 'Send a pre-charge reminder with one-click skip and add-ons', area: 'Subscriptions', goals: ['raise_rev_per_sub', 'reduce_churn'],
+      audience: skioOn ? { value: V('skio.get_subscription_summary.orders_per_month'), display: `${count(V('skio.get_subscription_summary.orders_per_month'))} subscription orders/month`, ref: R('skio.get_subscription_summary.orders_per_month') } : { value: 0, display: '—' },
+      currentRate: skioOn ? { value: V('skio.get_portal_usage.addon_attach'), display: F('skio.get_portal_usage.addon_attach'), ref: R('skio.get_portal_usage.addon_attach'), note: 'of orders carry an add-on' } : { value: 0, display: '—' },
+      targetRate: { value: 0.07, display: '7%', ref: C('b_addon'), note: 'bottom of 7–10%' },
+      valuePerConversion: skioOn ? { value: V('skio.get_portal_usage.addon_value'), display: `$${V('skio.get_portal_usage.addon_value')} average add-on`, ref: R('skio.get_portal_usage.addon_value') } : { value: 0, display: '—' },
+      rationale: `No reminder before charges ${R('skio.get_notifications.upcoming_order_reminder')}, and ${F('skio.get_notifications.regret_cancels')} of cancels come right after one ${R('skio.get_notifications.regret_cancels')}. Found by the subscriber agent.`,
+      citeRefs: [], dataRefs: [],
+      confidence: 'M', confidenceWhy: 'Add-on benchmark is solid; the churn effect is extra and not counted.',
+      effort: 'S', effortWhy: 'One Klaviyo flow on an event Skio already sends.',
+      requires: ['skio', 'klaviyo'],
+      overlapNote: 'Only the add-on revenue is counted. Fewer cancels right after a charge would be a bonus.',
+    },
+  );
   for (const o of opportunities) {
     const text = [o.rationale, o.audience.ref, o.currentRate.ref, o.targetRate.ref, o.valuePerConversion.ref].join(' ');
     o.dataRefs = refsIn(text);
@@ -687,6 +787,38 @@ export function buildDemoRun(runId: string, brief: RunBrief, opts: DemoRunOption
   const followups: { question: string; kind: 'web' | 'data'; why: string }[] = [];
   if (has('klaviyo')) followups.push({ kind: 'web', question: `Is day 10 the right send day for a subscribe prompt when a bag lasts ~${V('shopify.get_products.bag_days_supply')} days?`, why: 'Timing decides whether #1 lands as "running low?" or as spam.' });
   if (f2Enabled) followups.push({ kind: 'data', question: 'How many TikTok Shop buyers could be emailed if the Klaviyo sync were on?', why: 'Decides whether #4 is an email play or an insert-card play.' });
+
+  const ctx: Ctx = {
+    R, RID, V, F, C, has, brief, isQ4: brief.timeframe === 'this_quarter', subLtv, oneLtv, asOf,
+    offer: `subscribe and save 10%${discountCap ? ' (inside your 15% cap)' : ''}`,
+    date: (weeks) => shortDate(addDays(asOf, Math.round(weeks * 7) + 7)),
+    store: { name: fixture.store.name, domain: fixture.store.domain },
+  };
+  const journeys = buildJourneys(ctx);
+  const journeyCost = [0.28, 0.22, 0.26];
+  JOURNEY_AGENTS.forEach((j, i) => {
+    const start = 1_500 + i * 600;
+    const end = auditorEnd.get(j.id)!;
+    const jr = journeys.find((x2) => x2.id === j.journey)!;
+    at(start + 1_200, { type: 'agent.thinking', agentId: j.id, text: j.think });
+    const span = end - start - 6_000;
+    jr.steps.forEach((st, k) => at(start + 4_000 + (span * (k + 1)) / (jr.steps.length + 1), { type: 'journey.step', agentId: j.id, journey: jr.id, step: st }));
+    at(end - 2_000, { type: 'agent.text', agentId: j.id, text: jr.headline });
+    at(end, { type: 'agent.completed', agentId: j.id, durationMs: end - start, usage: usage(journeyCost[i], 3 + jr.steps.length, 30_000, 3_100) });
+    at(end + 50, { type: 'journey.done', agentId: j.id, journey: jr });
+  });
+  const pack = buildAnalytics(ctx);
+  const scorecard = buildScorecard(ctx);
+  const strategy = buildStrategy(ctx);
+  at(oStart + 400, { type: 'agent.started', agentId: 'growth-analyst' });
+  at(oStart + 3_400, { type: 'agent.thinking', agentId: 'growth-analyst', text: 'What an agency would put on page one: where visits drop off by device, what an order leaves after costs, how long a Meta customer takes to pay back, and which channels bring customers who stay.' });
+  at(oStart + 26_000, { type: 'agent.text', agentId: 'growth-analyst', text: pack.headline });
+  at(oEnd - 4_000, { type: 'agent.completed', agentId: 'growth-analyst', durationMs: oEnd - oStart - 4_400, usage: usage(0.62, 3, 70_000, 7_800) });
+  at(oEnd - 3_950, { type: 'analytics.pack', pack, scorecard });
+  at(oStart + 800, { type: 'agent.started', agentId: 'sub-strategist' });
+  at(oStart + 4_200, { type: 'agent.thinking', agentId: 'sub-strategist', text: 'Go tool by tool: where does the subscription get sold, remembered, protected and saved? Score each from 0 to 4 against what the best stores do.' });
+  at(oEnd - 1_500, { type: 'agent.completed', agentId: 'sub-strategist', durationMs: oEnd - oStart - 2_300, usage: usage(0.45, 2, 52_000, 6_200) });
+  at(oEnd - 1_450, { type: 'strategy.stack', strategy });
 
   at(oStart, { type: 'agent.started', agentId: 'opportunity-assembly' });
   at(oStart + 3_000, { type: 'agent.thinking', agentId: 'opportunity-assembly', text: 'Line up each store number against its benchmark. An opportunity only counts if it has at least two store data points behind it; generic best practice with no store gap gets dropped.' });
@@ -744,6 +876,9 @@ export function buildDemoRun(runId: string, brief: RunBrief, opts: DemoRunOption
     o4: { baseline: 0, target: 0.03, eligible: V('tiktokshop.get_shop_performance.first_time_buyers'), eligibleNote: `TikTok Shop first-time buyers a month ${R('tiktokshop.get_shop_performance.first_time_buyers')}`, lag: 4, hypothesis: 'An insert card plus Klaviyo sync gets at least 3% of TikTok Shop first-time buyers to subscribe within 60 days.', design: 'Alternate weeks: card in every order on odd weeks, none on even weeks (packing can\'t randomise per order).', primary: 'TikTok Shop first-time buyers who subscribe within 60 days', guardrails: ['TikTok Shop return rate', 'Card print cost per subscription start'], decision: 'Keep the card if conversion is 2% or more and cost per subscription start is under $15.' },
     o5: { baseline: 0.09, target: 0.13, eligible: V('meta.get_account_performance.new_customers_per_month'), eligibleNote: `Meta first-time buyers a month ${R('meta.get_account_performance.new_customers_per_month')}`, lag: 4, hypothesis: 'A sub-start-optimised ad set with subscription creative lifts the share of new Meta buyers who subscribe from 9% to 13%.', design: 'Split prospecting 50/50: current purchase-optimised ad set vs. sub-start-optimised ad set with subscription creative.', primary: 'Share of new buyers who subscribe within 60 days', guardrails: ['Blended CAC', 'Cost per subscription start', 'ROAS'], decision: 'Move budget if cost per subscription start falls 20% or more with CAC up less than 10%.', proxy: 'The detectable lift is loosened to 4 points; 9% → 11% would take about 9 months at this volume (see feasibility).' },
     o6: { baseline: 0, target: 0.012, eligible: V('klaviyo.get_list_health.identified_browsers_per_month'), eligibleNote: 'identified browsers a month', lag: 1, hypothesis: 'A browse-abandonment flow converts at least 1.2% of identified browsers.', design: '80/20 holdout on the flow trigger.', primary: 'Orders within 7 days of the browse', guardrails: ['Unsubscribe rate'], decision: 'Keep if conversion is at least 1% with no unsubscribe spike.' },
+    o8: { baseline: V('shopify.get_pdp_performance.first_order_sub_share'), target: 0.13, eligible: ftb, eligibleNote: `first-time buyers a month ${R('shopify.get_store_profile.first_time_buyers_per_month')}`, lag: 0, hypothesis: `Making subscription the default, visible option on product pages raises the share of first orders placed as subscriptions from ${F('shopify.get_pdp_performance.first_order_sub_share')} to at least 13%.`, design: 'Phones get the new product page; laptops keep today\'s page for 3 weeks as the comparison.', primary: 'First orders placed as a subscription', guardrails: ['Conversion rate', 'Average order value'], decision: 'Ship everywhere if phone subscription share rises 3 points or more with conversion flat.' },
+    o9: { baseline: has('gorgias') ? V('gorgias.get_macros.cancel_ticket_saves') : 0.04, target: 0.15, eligible: has('gorgias') ? Math.round(V('gorgias.get_ticket_summary.tickets') * V('gorgias.get_ticket_reasons.cancel_request')) : 209, eligibleNote: `cancel tickets a month ${R('gorgias.get_ticket_reasons.cancel_request')}`, lag: 4, hypothesis: 'Offering skip or a slower schedule first keeps at least 15% of subscribers who write in to cancel.', design: 'Alternate weeks: save-first macro on odd weeks, today\'s process on even weeks.', primary: 'Cancel tickets that end with the subscription kept (30 days later)', guardrails: ['CSAT', 'First response time'], decision: 'Keep it if 15% or more are kept and CSAT holds.' },
+    o10: { baseline: skioOn ? V('skio.get_portal_usage.addon_attach') : 0.04, target: 0.06, eligible: skioOn ? V('skio.get_subscription_summary.orders_per_month') : 6300, eligibleNote: `subscription orders a month ${R('skio.get_subscription_summary.orders_per_month')}`, lag: 0, hypothesis: 'A pre-charge email with a one-click add-on button lifts add-on attach from 4% to at least 6%.', design: 'Klaviyo split 50/50: reminder with add-on button vs reminder with skip/change only.', primary: 'Subscription orders with an add-on', guardrails: ['Skips per order', 'Cancels within 48 hours of a charge'], decision: 'Keep the button if attach reaches 6% or more.' },
     o7: { baseline: 0.48, target: 0.55, eligible: skioOn ? V('skio.get_dunning_performance.failed_per_month') : 188, eligibleNote: 'failed payments a month', lag: 2, hypothesis: 'Smart retries plus an SMS card-update prompt lift recovery from 48% to 55%.', design: 'Pre/post comparison over 8 weeks (volume is too low to split).', primary: 'Dunning recovery rate', guardrails: ['Retry fees', 'Complaints'], decision: 'Keep if recovery reaches 53% or more.' },
   };
   const testOf = (o: Opportunity) => {
@@ -850,6 +985,24 @@ export function buildDemoRun(runId: string, brief: RunBrief, opts: DemoRunOption
       success: { metric: 'Share of new Meta buyers who subscribe', target: '9% → 13%', by: successBy(testOf(opportunities[4]).total) },
     }),
     o6: () => ({ why: 'Missing standard flow; low confidence.', steps: ['Clone the Klaviyo browse-abandonment template, one email at 4 hours.', 'Show the viewed product with its subscription price.', 'Hold out 20%.'], owner: 'Email/lifecycle owner', tools: ['Klaviyo'], dependencies: [], success: { metric: 'Orders from browsers', target: '≥ 1%', by: successBy(6) } }),
+    o8: () => ({
+      why: `${F('shopify.get_pdp_performance.first_order_sub_share_mobile')} of mobile first orders are subscriptions ${R('shopify.get_pdp_performance.first_order_sub_share_mobile')} against ${F('shopify.get_pdp_performance.first_order_sub_share_desktop')} on desktop ${R('shopify.get_pdp_performance.first_order_sub_share_desktop')}, where the option is visible. Stores that default to subscription get 15–25% ${C('b_pdp_default')}.`,
+      steps: ['Preselect Subscribe & save on every product page and show its price up front.', 'Move the widget right under the price on mobile.', 'Add "Skip, change or cancel anytime" and a subscriber review under it.', 'Turn on Skio Checkout Upgrade and Save.', 'Update the welcome email so it tells the same story.'],
+      owner: 'Ecommerce lead', tools: ['Shopify theme', 'Skio', 'Klaviyo'], dependencies: [],
+      success: { metric: 'First orders placed as a subscription', target: `${F('shopify.get_pdp_performance.first_order_sub_share')} → 13% or more`, by: successBy(4) },
+    }),
+    o9: () => ({
+      why: `${F('gorgias.get_ticket_reasons.cancel_request')} of tickets are cancel requests ${R('gorgias.get_ticket_reasons.cancel_request')} and only ${F('gorgias.get_macros.cancel_ticket_saves')} are saved ${R('gorgias.get_macros.cancel_ticket_saves')}. Offering a skip first keeps 20–30% ${C('b_helpdesk')}.`,
+      steps: ['Install Skio\'s Gorgias sidebar.', 'Create Quick Action links for skip, every 8 weeks and pause.', 'Add a save-first macro and a do-it-for-them skip macro.', 'Auto-tag cancel requests so the macro is suggested.'],
+      owner: 'Support lead', tools: ['Gorgias', 'Skio'], dependencies: [],
+      success: { metric: 'Cancel tickets kept', target: '4% → 15% or more', by: successBy(8) },
+    }),
+    o10: () => ({
+      why: `No reminder before charges ${R('skio.get_notifications.upcoming_order_reminder')}; ${F('skio.get_notifications.regret_cancels')} of cancels happen right after one ${R('skio.get_notifications.regret_cancels')}. Add-on buttons lift attach to 7–10% ${C('b_addon')}.`,
+      steps: ['Set Skio\'s billing reminder to 3 days before each charge.', 'Create Quick Actions: add a bag, skip, every 6 weeks.', 'Build a Klaviyo flow on "Skio: Billing Reminder Notification" with a 50/50 split.', ...(has('sms') ? ['Add a Postscript text: reply SKIP to skip.'] : [])],
+      owner: 'Email/lifecycle owner', tools: ['Skio', 'Klaviyo', ...(has('sms') ? ['Postscript'] : [])], dependencies: [],
+      success: { metric: 'Orders with an add-on', target: '4% → 6% or more', by: successBy(4) },
+    }),
     o7: () => ({ why: 'Recovery below the benchmark range.', steps: ['In Skio, retry at 1, 3 and 7 days instead of 2 attempts in 5 days.', 'Add an SMS card-update link on the first failure.', 'Compare recovery for 8 weeks before and after.'], owner: 'Retention/CX lead', tools: ['Skio', ...(has('sms') ? ['Postscript'] : [])], dependencies: [], success: { metric: 'Dunning recovery', target: '48% → 55%', by: successBy(10) } }),
   };
   const initiatives: Initiative[] = top5.map((o) => ({ opportunityId: o.id, rank: o.rank!, title: o.title, ...INITIATIVES[o.id]() }));
@@ -900,7 +1053,7 @@ export function buildDemoRun(runId: string, brief: RunBrief, opts: DemoRunOption
     const revenue = V('shopify.get_store_profile.revenue');
     const where: string[] = [];
     where.push(`${fixture.store.name} did ${F('shopify.get_store_profile.revenue')} in the last 12 months ${R('shopify.get_store_profile.revenue')} from ${count(V('shopify.get_store_profile.customers'))} customers ${R('shopify.get_store_profile.customers')}.${skioOn ? ` Subscriptions are ${F('skio.get_subscription_summary.sub_revenue_share')} of revenue ${R('skio.get_subscription_summary.sub_revenue_share')} from ${count(V('skio.get_subscription_summary.active_subscribers'))} active subscribers ${R('skio.get_subscription_summary.active_subscribers')}, and a subscriber is worth $${subLtv} over 12 months against $${oneLtv} for a one-time buyer ${R('skio.get_ltv_comparison.sub_ltv')}${R('skio.get_ltv_comparison.one_time_ltv')}.` : ''}`);
-    let gap = `The gap is at the front door: ${count(ftb)} people buy for the first time each month ${R('shopify.get_store_profile.first_time_buyers_per_month')} and only ${pct(firstToSub)} of them subscribe within 60 days ${R('shopify.get_cohorts.first_to_sub_60d')}.`;
+    let gap = `The gap is at the front door: ${count(ftb)} people buy for the first time each month ${R('shopify.get_store_profile.first_time_buyers_per_month')}, ${F('shopify.get_pdp_performance.first_order_sub_share')} of first orders are subscriptions ${R('shopify.get_pdp_performance.first_order_sub_share')}, and only ${pct(firstToSub)} of the one-time buyers subscribe later ${R('shopify.get_cohorts.first_to_sub_60d')}.`;
     if (has('klaviyo')) gap += ` Nothing asks them to: the post-purchase flow is one email with no subscribe offer ${R('klaviyo.get_flow_performance.sub_offer', { flowId: 'post_purchase' })}, and flows drive only ${draft ? '22%' : F('klaviyo.get_list_health.flow_share_of_email')} of email revenue [${flowShareId}], against 30–45% at mature brands ${C('b_flowshare')}.`;
     where.push(gap);
     if (skioOn) where.push(`Once people do subscribe, ${F('skio.get_cancel_reasons.reason_too_much')} of cancels are "too much coffee" ${R('skio.get_cancel_reasons.reason_too_much')}, and the cancel flow's only answer is 10% off.`);
@@ -948,6 +1101,10 @@ ${moves.join('\n')}
 
 Together the top ${top5.length} are worth about **${usd(total5)} a year**, roughly ${pct(total5 / revenue, 0)} of current revenue. Estimates are revenue, not profit, and the Ranked plan tab shows every input.${goalNote}${constraintsLine}
 
+## What our shoppers saw
+
+${journeys.map((j) => `- **${j.persona}:** ${j.headline}`).join('\n')}
+
 ## What's working
 
 ${working.map((w) => `- ${w}`).join('\n')}
@@ -964,8 +1121,14 @@ ${start.map((w) => `- ${w}`).join('\n')}
   const draftMd = writeSummary(true);
   const finalMd = writeSummary(false);
 
+  const testsById = new Map(tests.map((t) => [t.opportunityId, t]));
+  const packages = buildPackages(ctx, ranked, testsById);
+  const bkEnd = plEnd + 6_000;
+  const pkgText = packages.map((pk) => [...pk.plainCase, ...pk.tracking.baseline.map((b) => (b.ref ? `[${b.ref}]` : '')), ...pk.walkthrough.map((w) => w.why)].join(' '));
+  const journeyText = journeys.flatMap((j) => j.steps.map((st) => st.why));
+  const analyticsText = [...pack.charts.map((c) => c.insight), ...scorecard.map((a) => `${a.line} ${a.working}`), ...strategy.why, ...strategy.stack.map((t) => t.today)];
   // Claims: every [c] and [d] cited anywhere in the plan.
-  const planText = [draftMd, ...initiatives.map((i) => [i.why, ...i.steps].join(' ')), ...priorities.map((o) => [o.rationale, o.audience.ref, o.currentRate.ref, o.targetRate.ref, o.valuePerConversion.ref].join(' ')), ...tests.map((t) => t.eligibleNote), ...feasibility.map((f) => f.availableLabel)].join(' ');
+  const planText = [...pkgText, ...journeyText, ...analyticsText, draftMd, ...initiatives.map((i) => [i.why, ...i.steps].join(' ')), ...priorities.map((o) => [o.rationale, o.audience.ref, o.currentRate.ref, o.targetRate.ref, o.valuePerConversion.ref].join(' ')), ...tests.map((t) => t.eligibleNote), ...feasibility.map((f) => f.availableLabel)].join(' ');
   const citedC = [...new Set([...planText.matchAll(/\[(c\d+)\]/g)].map((m) => m[1]))].sort((a, b) => Number(a.slice(1)) - Number(b.slice(1)));
   const citedD = [...new Set([...planText.matchAll(/\[(d\d+)\]/g)].map((m) => m[1]))].sort((a, b) => Number(a.slice(1)) - Number(b.slice(1)));
   const keyOfC = new Map([...cIds.entries()].map(([k, v]) => [v, k]));
@@ -983,9 +1146,14 @@ ${start.map((w) => `- ${w}`).join('\n')}
   at(plEnd + 50, { type: 'plan.draft', initiatives, roadmap });
   at(plEnd + 80, { type: 'tests.draft', tests, feasibility });
   at(plEnd + 110, { type: 'report.draft', markdown: draftMd, claims, dataClaims });
+  at(plStart + 1_500, { type: 'agent.started', agentId: 'build-kits' });
+  at(plStart + 4_500, { type: 'agent.thinking', agentId: 'build-kits', text: 'For every ranked move: the Skio setup, paired comms with finished copy and Quick Action links, an A/B test, and a baseline to compare against. Plain words: the reader may not be technical.' });
+  packages.slice(0, 4).forEach((pk, i) => at(plStart + 14_000 + i * 11_000, { type: 'agent.text', agentId: 'build-kits', text: `Kit ${i + 1}: ${pk.title}. ${pk.assets.length} pieces: ${[...new Set(pk.assets.map((a) => a.platform))].join(', ')}.` }));
+  at(bkEnd, { type: 'agent.completed', agentId: 'build-kits', durationMs: bkEnd - plStart - 1_500, usage: usage(1.2, 4, 110_000, 22_600) });
+  at(bkEnd + 50, { type: 'build.packages', packages });
 
   // ---------------- fact-check ----------------
-  const fcStart = plEnd + 1_000;
+  const fcStart = bkEnd + 1_000;
   const fcEnd = fcStart + 34_000;
   const verdicts: ClaimVerdict[] = [
     ...citedC.map((id) => {
@@ -1022,7 +1190,10 @@ ${start.map((w) => `- ${w}`).join('\n')}
   at(endT + 60, { type: 'run.completed', durationMs: endT + 60, costUsd: Math.round(cost * 100) / 100 });
 
   events.sort((a, b) => a.t - b.t || a.order - b.order);
-  return events.map((e, i) => ({ ...e.body, seq: i, t: e.t }) as RunEvent);
+  // A citation to a switched-off source renders as "", which can leave "flow ." behind; tidy those.
+  const tidy = (v: unknown): unknown =>
+    typeof v === 'string' ? v.replace(/ +([.,;:)])/g, '$1').replace(/ {2,}/g, ' ') : Array.isArray(v) ? v.map(tidy) : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x2]) => [k, tidy(x2)])) : v;
+  return events.map((e, i) => ({ ...(tidy(e.body) as RunEventBody), seq: i, t: e.t }) as RunEvent);
 }
 
 export { TOOL_PHRASES, TIMEFRAME_LABELS };

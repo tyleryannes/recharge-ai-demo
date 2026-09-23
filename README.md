@@ -1,4 +1,39 @@
-# Research crew → Growth Planner (V2)
+# Research crew → Growth Planner (V3)
+
+## What's new in V3
+
+- **Shopper-journey agents.** Three agents walk the storefront as a first-time shopper (phone, from a Meta ad),
+  a returning one-time buyer, and an existing subscriber. Each step is marked "fix first", "worth fixing" or
+  "working", tagged with the goals it bears on, and linked to the move it feeds. Steps that fit the merchant's
+  goal come first; everything else is still shown, so they learn what's working too.
+- **Growth analytics, agency-style.** Funnel by device, first-year value curves (subscriber vs one-time),
+  channel economics (first-year revenue per $1 of CAC), what's left of an order after costs, Meta payback,
+  cancel reasons, support-ticket reasons, flow vs campaign revenue, review themes, and a health scorecard with a
+  grade per area plus what's already working. All maths in code.
+- **Subscription strategy across the stack.** Why subscriptions matter for this store (in plain sentences with
+  its own numbers), a maturity score, and tool-by-tool cards for Shopify, Skio, Klaviyo, Postscript, Gorgias,
+  Okendo, Meta and TikTok Shop: today, what great looks like, and the plays that close the gap.
+- **"Build this for me" and "Walk me through it" on every move.** Each build kit has the real Skio setup
+  (cancel flow Treatments and Cancel flow A/B tests, Quick Actions V3 stacks such as "One-time to subscription",
+  Post-purchase upsell, Checkout Upgrade and Save, Payment Recovery, Winbacks, the Gorgias sidebar and macros),
+  paired Klaviyo and Postscript comms with finished copy, illustrations and Quick Action links, an A/B test, a
+  tracking baseline pulled from today's numbers, and a plain-language case for why it's worth doing. The
+  walkthrough is the same content as click-by-click steps with "why this matters" for non-technical staff.
+  Skio feature and event names were checked against the Skio codebase.
+- **A redesigned plan workspace.** Sidebar sections, comments on anything (journey steps, charts, moves, email
+  and SMS assets), a notes pad, a status and owner per move, a "start this week" checklist, and editable
+  assumptions (target rate, confidence, effort) that re-rank the plan live. Saved next to the run
+  (`data/research/<runId>/workspace.json`), or in the browser for the offline file.
+- **More demo data.** Funnel, margins, channels, LTV curves and page speed from Shopify; Gorgias and Okendo as new
+  sources; storefront pages; portal, Quick Action and notification data from Skio; more for Klaviyo, Postscript,
+  Meta and TikTok Shop. Run cost stays under the spec's $15 and about 9 minutes of recorded time.
+
+Deep links for demos: `?run=<id>&section=journeys|analytics|strategy|audit|plan|tests|sources`,
+`&journey=subscriber`, `&build=o2` or `&walk=o1` to open a build kit or walkthrough.
+
+`./node_modules/.bin/tsx scripts/smoke-run.ts` builds the run under several source toggles and checks it.
+
+## V2
 
 ## V2 demo: the Merchant Growth Planner (demo data, no agents, no cost)
 

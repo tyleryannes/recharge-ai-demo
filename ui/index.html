@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Growth Planner</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
     --ink: #14202E;
@@ -373,6 +373,10 @@
     --lane-plan: #7DD3C0;
     --src-shopify: #8DB845; --src-klaviyo: #F0C75E; --src-sms: #7AA7FF; --src-meta: #5B8DEF;
     --src-tiktok: #EE5A7A; --src-tiktokshop: #4FD1C5; --src-skio: #B28BF5;
+    --src-gorgias: #F29B6B; --src-okendo: #E6C3F0; --src-storefront: #9FB2C4;
+    --lane-audit-cx: #F29B6B;
+    --lane-journey-first-time: #F28FB5; --lane-journey-returning: #7FD1E8; --lane-journey-subscriber: #C9A6FF;
+    --lane-journeys: #F28FB5;
     --warn: #F5B94A;
   }
   .map svg.v2 .label { font-size: 13.5px; }
@@ -664,6 +668,7 @@
 <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
 <script src="/config.js"></script>
 <script src="/office.js"></script>
+<link rel="stylesheet" href="/workspace.css">
 <script>
 (() => {
   // Where the run server lives. Same origin locally; on the hosted page, config.js names the tunnel
@@ -682,7 +687,7 @@
   const stageLabel = (s) => (state.stageLabels && state.stageLabels[s]) || STAGE_LABELS[s] || s;
   const ALL = '*';
   const FEED_CAP = 400;
-  const laneOf = (agent) => `var(--lane-${agent.stage === 'research' || agent.stage === 'audit' ? agent.id : agent.stage})`;
+  const laneOf = (agent) => `var(--lane-${agent.stage === 'research' || agent.stage === 'audit' || agent.stage === 'journeys' ? agent.id : agent.stage})`;
 
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -701,6 +706,8 @@
     v2: false, stages: null, stageLabels: null, runBrief: null, store: null, playback: null,
     ledger: new Map(), webFindings: [], profile: null, opps: null, priorities: null, plan: null, tests: null,
     dataClaims: [], reportCounts: null, planVersion: 0,
+    // V3
+    journeys: {}, journeySteps: {}, analytics: null, scorecard: null, strategy: null, packages: null,
   });
   const state = { runId: null, selected: ALL, stick: true, ...freshRun() };
   const allEvents = [];       // every event of this run, in order, for replay
@@ -788,6 +795,12 @@
       case 'priorities': state.priorities = ev.items; pushTrace('prioritiser', { kind: 'priorities', items: ev.items }, ev.t); state.planVersion++; break;
       case 'plan.draft': state.plan = { initiatives: ev.initiatives, roadmap: ev.roadmap }; pushTrace('planner', { kind: 'plan', initiatives: ev.initiatives }, ev.t); state.planVersion++; break;
       case 'tests.draft': state.tests = { tests: ev.tests, feasibility: ev.feasibility }; pushTrace('planner', { kind: 'tests', tests: ev.tests, feasibility: ev.feasibility }, ev.t); state.planVersion++; break;
+      // V3: shopper journeys, analytics, strategy, build kits
+      case 'journey.step': (state.journeySteps[ev.journey] ||= []).push(ev.step); pushTrace(ev.agentId, { kind: 'jstep', step: ev.step }, ev.t); state.planVersion++; break;
+      case 'journey.done': state.journeys[ev.journey.id] = ev.journey; state.planVersion++; break;
+      case 'analytics.pack': state.analytics = ev.pack; state.scorecard = ev.scorecard; pushTrace('growth-analyst', { kind: 'analytics', pack: ev.pack, scorecard: ev.scorecard }, ev.t); state.planVersion++; break;
+      case 'strategy.stack': state.strategy = ev.strategy; pushTrace('sub-strategist', { kind: 'strategy', strategy: ev.strategy }, ev.t); state.planVersion++; break;
+      case 'build.packages': state.packages = ev.packages; pushTrace('build-kits', { kind: 'kits', packages: ev.packages }, ev.t); state.planVersion++; break;
     }
     if (office && !state.v2 && !rebuilding && !(backlog && !replay.active)) {
       office.onEvent(ev);
@@ -927,7 +940,8 @@
     const hero = $('hero');
     const showFlow = !!flow.screen;
     const m = modeOf();
-    if (showFlow) hero.innerHTML = '';
+    // In the plan workspace the question heads the page, so the app header drops it.
+    if (showFlow || (state.v2 && m === 'plan' && window.GPWorkspace)) hero.innerHTML = '';
     else if (composerOpen) hero.innerHTML = `<p class="brief placeholder">${noRunsYet ? 'Give the crew its first brief.' : 'A new brief for the crew.'}</p>`;
     else if (state.brief) hero.innerHTML = `<p class="brief">${esc(state.brief)}</p>${state.v2 && state.runBrief ? `<div class="note" style="margin-top:4px">${esc(state.store?.name || '')} <span class="demo-tag">Demo data</span> · ${briefBits(state.runBrief).map(esc).join(' · ')}</div>` : ''}`;
     else hero.innerHTML = `<p class="brief placeholder">${noRunsYet ? 'Give the crew its first brief.' : 'Pick a run, or ask a new question.'}</p>`;
@@ -981,7 +995,7 @@
   function renderMap() {
     const svg = $('map');
     const STAGES = stagesOf();
-    const COL_W = state.v2 ? 150 : COL_W1, ROW_H = state.v2 ? 78 : ROW_H1;
+    const COL_W = state.v2 ? 150 : COL_W1, ROW_H = state.v2 ? (Math.max(...[...new Map(stagesOf().map((s) => [s, 0]))].map(([st]) => state.order.filter((id) => state.agents.get(id)?.stage === st).length)) > 6 ? 70 : 78) : ROW_H1;
     svg.classList.toggle('v2', !!state.v2);
     const byStage = new Map(STAGES.map((s) => [s, []]));
     for (const id of state.order) { const a = state.agents.get(id); if (byStage.has(a.stage)) byStage.get(a.stage).push(a); }
@@ -1178,8 +1192,8 @@
   $('evidence').addEventListener('click', () => { $('evidence').innerHTML = ''; $('report').querySelectorAll('.claim.active').forEach((el) => el.classList.remove('active')); });
 
   /* ================= V2: growth planner ================= */
-  const SRC = { shopify: ['Shopify', 'Sh'], klaviyo: ['Klaviyo', 'Kl'], sms: ['Postscript', 'Ps'], meta: ['Meta Ads', 'Me'], tiktok: ['TikTok Ads', 'Tt'], tiktokshop: ['TikTok Shop', 'TS'], skio: ['Skio', 'Sk'] };
-  const SRC_ORDER = ['shopify', 'klaviyo', 'sms', 'meta', 'tiktok', 'tiktokshop', 'skio'];
+  const SRC = { shopify: ['Shopify', 'Sh'], klaviyo: ['Klaviyo', 'Kl'], sms: ['Postscript', 'Ps'], meta: ['Meta Ads', 'Me'], tiktok: ['TikTok Ads', 'Tt'], tiktokshop: ['TikTok Shop', 'TS'], skio: ['Skio', 'Sk'], gorgias: ['Gorgias', 'Go'], okendo: ['Okendo', 'Ok'], storefront: ['Storefront', 'SF'] };
+  const SRC_ORDER = ['shopify', 'klaviyo', 'sms', 'meta', 'tiktok', 'tiktokshop', 'skio', 'gorgias', 'okendo'];
   const srcLabel = (s) => (SRC[s] ? SRC[s][0] : s);
   const mono = (s, sm = true) => `<span class="mono ${sm ? 'sm' : ''}" style="background:var(--src-${esc(s)})" title="${esc(srcLabel(s))}">${esc(SRC[s] ? SRC[s][1] : '?')}</span>`;
   const toolPhrase = (tool) => String(tool).split('.')[1].replace(/^(get|list)_/, '').replace(/_/g, ' ').replace(/\bltv\b/, 'LTV').replace(/\bsms\b/, 'SMS');
@@ -1194,7 +1208,12 @@
       case 'count_per_month': return `${num(v)}/mo`;
       case 'days': return `${v} days`;
       case 'orders': return `${v} orders`;
-      case 'bool': return v ? 'On' : 'Off';
+      case 'bool': return v ? 'Yes' : 'No';
+      case 'px': return `${num(v)} px`;
+      case 'seconds': return `${v} s`;
+      case 'hours': return `${v} h`;
+      case 'x': return `${v}×`;
+      case 'score': return `${v}`;
       default: return num(v);
     }
   }
@@ -1428,6 +1447,7 @@
 
   function renderPlan() {
     if (modeOf() !== 'plan' || flow.screen) return;
+    if (window.GPWorkspace) { window.GPWorkspace.render($('planview')); return; }
     const key = `${planTab}:${state.planVersion}:${state.verdicts.size}:${JSON.stringify(srcFilter)}`;
     if (key === renderedPlanKey) return;
     renderedPlanKey = key;
@@ -1605,6 +1625,14 @@
       case 'priorities': return `<div class="headline">Ranked by dollar score</div><ol style="margin:4px 0 0;padding-left:18px">${e.items.filter((o) => o.rank).map((o) => `<li>${esc(o.title)}: <strong>${usdShort(o.annualImpact)}/yr</strong> <span class="note">score ${usdShort(o.score)}</span></li>`).join('')}</ol>${e.items.some((o) => o.locked) ? `<div class="note" style="margin-top:4px">${e.items.filter((o) => o.locked).length} locked (source off)</div>` : ''}${e.items.some((o) => o.excluded) ? `<div class="note">${e.items.filter((o) => o.excluded).length} ruled out by a constraint</div>` : ''}`;
       case 'plan': return `<div class="headline">Action plans for ${e.initiatives.length} moves, plus a 30/60/90 roadmap</div><ul class="plain">${e.initiatives.map((i) => `<li>#${i.rank} ${esc(i.title)}: ${i.steps.length} steps</li>`).join('')}</ul>`;
       case 'tests': return `<div class="headline">${e.tests.length} test designs</div><ul class="plain">${e.tests.map((x) => `<li>#${x.rank}: ~${num(x.nPerArm)} per arm, ~${Math.round(x.totalWeeks)} weeks</li>`).join('')}</ul>${e.feasibility.map((f) => `<div class="note">Not feasible as asked: ${esc(f.name)} (needs ~${num(f.nPerArm)} per arm)</div>`).join('')}`;
+      case 'jstep': {
+        const st = e.step;
+        const tag = st.verdict === 'good' ? '<span class="sev good">working</span>' : st.verdict === 'info' ? '<span class="sev low">note</span>' : `<span class="sev ${esc(st.severity || 'med')}">${st.severity === 'med' ? 'medium' : esc(st.severity || 'issue')}</span>`;
+        return `<div class="headline">${st.device === 'mobile' ? '📱' : '💻'} ${esc(st.place)}</div><div>${tag}${esc(st.saw)}</div><div class="evidence" style="margin-top:3px">${pt(st.why)}</div>`;
+      }
+      case 'analytics': return `<div class="headline">${esc(e.pack.headline)}</div><ul class="plain">${e.scorecard.map((a) => `<li><strong>${esc(a.grade)}</strong> · ${esc(a.area)}</li>`).join('')}</ul><div class="note">${e.pack.charts.length} charts for the plan</div>`;
+      case 'strategy': return `<div class="headline">Subscription maturity across the stack: ${e.strategy.maturity}/100</div><ul class="plain">${e.strategy.stack.map((t) => `<li>${'●'.repeat(t.maturity)}${'○'.repeat(4 - t.maturity)} ${esc(t.tool)}</li>`).join('')}</ul>`;
+      case 'kits': return `<div class="headline">${e.packages.length} build kits ready</div><ul class="plain">${e.packages.map((k) => `<li>${esc(k.title)}: ${k.assets.length} pieces, ${k.walkthrough.length} steps</li>`).join('')}</ul>`;
       case 'verdicts2': {
         const web = e.verdicts.filter((v) => v.id.startsWith('c')), data = e.verdicts.filter((v) => v.id.startsWith('d'));
         const odd = data.filter((v) => v.verdict !== 'recomputed');
@@ -1637,6 +1665,8 @@
   }
   $('report').addEventListener('click', (e) => { if (e.target.closest('[data-open-plan]')) { planMode = 'plan'; if (replay.playing) replay.playing = false; invalidate(); } });
 
+  // The V3 plan workspace (workspace.js) reads state and shared helpers from here.
+  window.GP = { state, esc, pt, pillify, markdown, mono, srcLabel, fmtValue, usdShort, pctS, num, invalidate, transport, post, API, LOCAL, laneOf, modeOf, briefBits, SRC_ORDER, authHeaders: () => (password ? { 'x-demo-password': password } : {}), setPlanMode: (m) => { planMode = m; invalidate(); } };
   function render() { renderHeader(); renderFlow(); if (flow.screen) return; if (state.v2 && modeOf() === 'plan') { renderPlan(); return; } renderedPlanKey = ''; renderMap(); renderTrace(); renderReport(); }
   setInterval(() => { if (state.status === 'running' && !replay.active) renderHeader(); }, 1000);
 
@@ -1682,5 +1712,6 @@
   window.addEventListener('popstate', () => { const r = new URLSearchParams(location.search).get('run'); if (r && r !== state.runId) openRun(r, true); });
 })();
 </script>
+<script src="/workspace.js"></script>
 </body>
 </html>

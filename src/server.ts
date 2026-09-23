@@ -4,18 +4,23 @@
  * runs come off disk; live ones off their RunBus.
  */
 
-import { readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { streamSSE } from 'hono/streaming';
 import { RunBus, type RunEvent } from './events.js';
-import { listStoredRuns, readRunEvents, summariseEvents, type RunSummary } from './run-store.js';
+import { listStoredRuns, readRunEvents, runDir, summariseEvents, type RunSummary } from './run-store.js';
 import { fixture } from './connectors/demo-tools.js';
 import { EXAMPLE_QUESTIONS, buildIntake, normaliseRunBrief } from './v2/intake.js';
 import type { RunBrief } from './v2/types.js';
 
 const PAGE_URL = new URL('../ui/index.html', import.meta.url);
 const OFFICE_URL = new URL('../ui/office.js', import.meta.url);
+/** V3 plan workspace, served next to the page. */
+const UI_ASSETS: Record<string, string> = { '/workspace.js': 'text/javascript', '/workspace.css': 'text/css' };
+/** Comments, notes, statuses and edited assumptions a merchant adds to a plan. */
+const WORKSPACE_MAX_BYTES = 512_000;
 /** Keeps proxies and browsers from closing a quiet stream while an agent thinks. */
 const HEARTBEAT_MS = 15_000;
 
@@ -66,12 +71,15 @@ export function createResearchApp({ registry, startRun, startDemoRun, skipRun, d
   // Locally the page talks to its own origin; the static Vercel build ships a config.js that points here.
   app.get('/config.js', (c) => c.body('window.RESEARCH_API = "";', 200, { 'content-type': 'text/javascript; charset=utf-8' }));
   app.get('/favicon.ico', (c) => c.body(null, 204));
+  for (const [path, type] of Object.entries(UI_ASSETS)) {
+    app.get(path, (c) => c.body(readFileSync(new URL(`../ui${path}`, import.meta.url), 'utf8'), 200, { 'content-type': `${type}; charset=utf-8` }));
+  }
   // The demo page may be served from another origin (Vercel) with this server behind a tunnel.
   app.use('/api/*', cors());
 
   app.use('/api/*', async (c, next) => {
     const password = process.env.DEMO_PASSWORD;
-    if (password && c.req.method === 'POST' && c.req.header('x-demo-password') !== password) {
+    if (password && c.req.method !== 'GET' && c.req.header('x-demo-password') !== password) {
       return c.json({ error: 'This demo needs a password.', needsPassword: true }, 401);
     }
     await next();
@@ -107,6 +115,28 @@ export function createResearchApp({ registry, startRun, startDemoRun, skipRun, d
     if (demoOnly) return c.json({ error: 'Live agent runs are off in demo mode.' }, 400);
     runStarts.set(ip, [...recent, now]);
     return c.json({ runId: startRun(brief) }, 201);
+  });
+
+  // The merchant's own layer on a plan. Stored beside the run; the run's events never change.
+  const workspaceFile = (runId: string) => (/^[\w~-]+$/.test(runId) ? join(runDir(runId), 'workspace.json') : null);
+  app.get('/api/runs/:id/workspace', (c) => {
+    const file = workspaceFile(c.req.param('id'));
+    if (!file) return c.json({ error: 'Bad run id.' }, 400);
+    return c.json(existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : {});
+  });
+  app.put('/api/runs/:id/workspace', async (c) => {
+    const runId = c.req.param('id');
+    const file = workspaceFile(runId);
+    if (!file) return c.json({ error: 'Bad run id.' }, 400);
+    if (!registry.get(runId) && readRunEvents(runId).length === 0) return c.json({ error: 'No run with that id.' }, 404);
+    const text = await c.req.text();
+    if (text.length > WORKSPACE_MAX_BYTES) return c.json({ error: 'Workspace too large.' }, 413);
+    let body: unknown;
+    try { body = JSON.parse(text); } catch { return c.json({ error: 'Not JSON.' }, 400); }
+    if (!body || typeof body !== 'object' || Array.isArray(body)) return c.json({ error: 'Expected an object.' }, 400);
+    mkdirSync(runDir(runId), { recursive: true });
+    writeFileSync(file, JSON.stringify(body));
+    return c.json({ ok: true });
   });
 
   app.post('/api/runs/:id/skip', (c) => {

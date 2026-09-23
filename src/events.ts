@@ -19,6 +19,7 @@ import type {
   StoreProfile,
   TestPlan,
 } from './v2/types.js';
+import type { AnalyticsPack, AreaScore, BuildPackage, Journey, JourneyStep, SubscriptionStrategy } from './v3/types.js';
 
 export type StageId =
   | 'brief'
@@ -34,7 +35,9 @@ export type StageId =
   | 'audit-assembly'
   | 'opportunities'
   | 'prioritise'
-  | 'plan';
+  | 'plan'
+  // V3
+  | 'journeys';
 
 /** Left-to-right order of the pipeline map. */
 export const STAGE_ORDER: readonly StageId[] = [
@@ -61,12 +64,14 @@ export const STAGE_LABELS: Record<StageId, string> = {
   opportunities: 'Opportunities',
   prioritise: 'Prioritise',
   plan: 'Plan',
+  journeys: 'Shopper journeys',
 };
 
 /** V2 map order. Sent in run.started so the page stops hard-coding stages. */
 export const V2_STAGE_ORDER: readonly StageId[] = [
   'intake',
   'audit',
+  'journeys',
   'audit-assembly',
   'research',
   'opportunities',
@@ -189,7 +194,13 @@ export type RunEventBody =
   | { type: 'opportunities'; items: Opportunity[]; followups: { question: string; kind: 'web' | 'data'; why: string }[] }
   | { type: 'priorities'; items: ScoredOpportunity[] }
   | { type: 'plan.draft'; initiatives: Initiative[]; roadmap: Roadmap }
-  | { type: 'tests.draft'; tests: TestPlan[]; feasibility: FeasibilityCheck[] };
+  | { type: 'tests.draft'; tests: TestPlan[]; feasibility: FeasibilityCheck[] }
+  // ---- V3: shopper journeys, analytics, subscription strategy, build kits ----
+  | { type: 'journey.step'; agentId: string; journey: Journey['id']; step: JourneyStep }
+  | { type: 'journey.done'; agentId: string; journey: Journey }
+  | { type: 'analytics.pack'; pack: AnalyticsPack; scorecard: AreaScore[] }
+  | { type: 'strategy.stack'; strategy: SubscriptionStrategy }
+  | { type: 'build.packages'; packages: BuildPackage[] };
 
 export type RunEvent = RunEventBody & {
   /** Position in the run's stream; the SSE id and the replay cursor. */

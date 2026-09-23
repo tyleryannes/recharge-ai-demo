@@ -66,7 +66,7 @@ export function buildIntake(question: string): { store: typeof fixture.store; qu
       select: 'single',
       allowOther: true,
       options: ([
-        { id: 'convert_one_time_to_sub', label: GOAL_LABELS.convert_one_time_to_sub, why: `Only ${pct(firstToSub)} of first-time buyers subscribe within 60 days`, whySource: 'shopify' },
+        { id: 'convert_one_time_to_sub', label: GOAL_LABELS.convert_one_time_to_sub, why: `Only ${pct(firstToSub)} of one-time buyers go on to subscribe within 60 days`, whySource: 'shopify' },
         { id: 'reduce_churn', label: GOAL_LABELS.reduce_churn, why: `Monthly churn is ${pct(churn)}; ${pct(tooMuch, 0)} of cancels say "too much coffee"`, whySource: 'skio' },
         { id: 'acquire_direct', label: GOAL_LABELS.acquire_direct, why: `Meta CAC is $${cac}, but only ${pct(metaSub, 0)} of those buyers subscribe`, whySource: 'meta' },
         { id: 'raise_rev_per_sub', label: GOAL_LABELS.raise_rev_per_sub, why: `Average subscription order is $${subAov}`, whySource: 'skio' },

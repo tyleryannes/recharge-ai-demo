@@ -68,7 +68,17 @@ export function formatValue(value: number, unit: string): string {
     case 'orders':
       return `${value} orders`;
     case 'bool':
-      return value ? 'On' : 'Off';
+      return value ? 'Yes' : 'No';
+    case 'px':
+      return `${count(value)} px`;
+    case 'seconds':
+      return `${value} s`;
+    case 'hours':
+      return `${value} h`;
+    case 'score':
+      return `${value}`;
+    case 'x':
+      return `${value}×`;
     default:
       return count(value);
   }

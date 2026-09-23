@@ -17,9 +17,13 @@ export async function buildStandalone(out: string): Promise<string> {
   const engine = bundle.outputFiles[0].text;
   const page = readFileSync(new URL('../../ui/index.html', import.meta.url), 'utf8');
   const office = readFileSync(new URL('../../ui/office.js', import.meta.url), 'utf8');
+  const workspaceJs = readFileSync(new URL('../../ui/workspace.js', import.meta.url), 'utf8');
+  const workspaceCss = readFileSync(new URL('../../ui/workspace.css', import.meta.url), 'utf8');
   const html = page
     .replace('<script src="/config.js"></script>', () => `${inlineScript('window.RESEARCH_API = ""; window.DEMO_STANDALONE = true;')}\n${inlineScript(engine)}`)
-    .replace('<script src="/office.js"></script>', () => inlineScript(office));
+    .replace('<script src="/office.js"></script>', () => inlineScript(office))
+    .replace('<link rel="stylesheet" href="/workspace.css">', () => `<style>\n${workspaceCss}\n</style>`)
+    .replace('<script src="/workspace.js"></script>', () => inlineScript(workspaceJs));
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, html);
   return out;
