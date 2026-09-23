@@ -32,21 +32,23 @@
   ];
 
   /* ---------------- the merchant's layer ---------------- */
-  const blank = () => ({ comments: [], notes: '', status: {}, owners: {}, overrides: {}, walk: {}, built: {}, week: {} });
+  const blank = () => ({ comments: [], notes: '', status: {}, owners: {}, overrides: {}, walk: {}, built: {}, week: {}, review: {} });
   const ws = { runId: null, data: blank(), loading: false, version: 0, saveTimer: 0, savedAt: null };
   let author = '';
   try { author = localStorage.getItem('gp.author') || ''; } catch {}
   const lsKey = (id) => `gp.ws.${id}`;
   async function ensureLoaded(runId) {
     if (!runId || ws.runId === runId || ws.loading) return;
-    ws.loading = true; ws.runId = runId; ws.data = blank();
+    ws.loading = true; ws.loaded = false; ws.runId = runId; ws.data = blank();
     let got = null;
     try { const cached = localStorage.getItem(lsKey(runId)); if (cached) got = JSON.parse(cached); } catch {}
     if (!GP().LOCAL) {
       try { const res = await fetch(`${GP().API}/api/runs/${encodeURIComponent(runId)}/workspace`); if (res.ok) { const server = await res.json(); if (server && Object.keys(server).length) got = server; } } catch {}
     }
     ws.data = { ...blank(), ...(got || {}) };
-    ws.loading = false; ws.version++; GP().invalidate();
+    ws.loading = false; ws.loaded = true; ws.version++; GP().invalidate();
+    // A review opened before the saved progress arrived should resume at the right card.
+    if (rv.open && !rv.summary) { const d = deck(), next = d.findIndex((c) => !decided(c)); if (next < 0) rv.summary = true; else rv.i = next; renderReview(true); }
   }
   function changed(rerender = true) {
     ws.version += rerender ? 1 : 0;
@@ -72,6 +74,7 @@
   const qp = new URLSearchParams(location.search);
   if (qp.get('section')) view.section = qp.get('section');
   if (qp.get('journey')) view.journey = qp.get('journey');
+  let deepReview = qp.get('review') === '1';
   const deepSheet = qp.get('build') ? ['build', qp.get('build')] : qp.get('walk') ? ['walk', qp.get('walk')] : null;
 
   /* ---------------- scoring with the merchant's edits ---------------- */
@@ -122,6 +125,8 @@
       main.scrollTop = top;
     }
     renderRail();
+    renderReview();
+    if (deepReview && deck().length && ws.loaded) { deepReview = false; openReview(); }
     if (deepSheet && pkgOf(deepSheet[1])) { const [m, id] = deepSheet; deepSheet.length = 0; openSheet(id, m); }
     renderSheet();
   }
@@ -148,6 +153,7 @@
       <div class="brand"><span class="logo">B&amp;B</span><div><b>${esc(st.store?.name || 'Growth plan')}</b><span>Growth plan · demo data</span></div></div>
       ${SECTIONS.map(([id, ico, label]) => `<button type="button" class="nav" data-section="${id}" aria-current="${view.section === id}" ${available[id]() ? '' : 'disabled'}><span class="ico">${ico}</span>${label}${counts[id] ? `<span class="count">${counts[id]}</span>` : ''}</button>`).join('')}
       <div class="sep"></div>
+      ${deck().length ? `<button type="button" class="nav" data-review-open><span class="ico">💘</span>Quick review<span class="count">${reviewCount()}/${deck().length}</span></button>` : ''}
       <button type="button" class="nav" data-rail="comments"><span class="ico">💬</span>Comments<span class="count">${ws.data.comments.filter((c) => !c.resolved).length || ''}</span></button>
       <button type="button" class="nav" data-rail="notes"><span class="ico">📝</span>Notes</button>
       <button type="button" class="nav" data-watch><span class="ico">▶</span>Watch the crew</button>
@@ -186,6 +192,13 @@
         <div class="tags" style="margin-top:6px"><span class="tag good">${(st.reportCounts?.data.recomputed ?? 0)} store numbers checked</span><span class="tag">${st.claims.length} web claims</span></div>
       </div></div>`;
     if (st.analytics?.kpis?.length) html += `<div class="kpis">${st.analytics.kpis.map((k) => `<div class="kpi ${k.tone || ''}"><div class="k">${esc(k.label)}</div><div class="v">${esc(k.value)}${k.ref ? pt(` [${k.ref}]`) : ''}</div>${k.note ? `<div class="n">${esc(k.note)}</div>` : ''}</div>`).join('')}</div>`;
+    const dk = deck();
+    if (dk.length) {
+      const n = reviewCount(), loved = dk.filter((c) => ws.data.review[c.opportunityId]?.decision === 'love').length;
+      html += `<div class="review-cta"><div class="big-ico">💘</div><div><h3>${n ? (n < dk.length ? 'Pick up your quick review' : 'Your shortlist is ready') : 'Quick review: make this plan yours in 3 minutes'}</h3>
+        <p>${n ? `${n} of ${dk.length} moves reviewed · ${loved} saved. ` : ''}Swipe through each move like a profile, pick the version you like (or several), heart it to save it, pass on what doesn't fit, and leave notes or requests. It saves as you go.</p></div>
+        <button type="button" class="ws-btn primary" data-review-open>${n ? (n < dk.length ? 'Continue' : 'See my shortlist') : 'Start quick review'}</button></div>`;
+    }
     if (top.length) {
       html += `<div class="ws-h2"><h2>Your top 3 moves</h2><span class="sub">Ranked by yearly value × confidence ÷ effort</span><span class="grow"></span><button type="button" class="ws-btn sm" data-section="plan">See all ${eff.filter((o) => o.eff).length}</button></div>
         <div class="grid3">${top.slice(0, 3).map((o) => moveCard(o)).join('')}</div>`;
@@ -210,7 +223,7 @@
     const status = ws.data.status[o.id] || '';
     return `<div class="move-card"><div class="rank">#${o.eff.rank} · ${esc(o.area)}</div><h3>${esc(o.title)}</h3>${cbtn(`move:${o.id}`, o.title)}
       <div class="money">${usd(o.eff.impact)}<small> / year</small></div>
-      <div class="tags"><span class="tag">${EFF[o.eff.effort][0]} effort</span><span class="tag">~${o.timeToSignalWeeks} weeks to know</span>${o.goalFit ? '<span class="tag good">Fits your goal</span>' : ''}${status ? `<span class="tag accent">${esc(STATUS.find(([k]) => k === status)[1])}</span>` : ''}</div>
+      <div class="tags"><span class="tag">${EFF[o.eff.effort][0]} effort</span><span class="tag">~${o.timeToSignalWeeks} weeks to know</span>${o.goalFit ? '<span class="tag good">Fits your goal</span>' : ''}${status ? `<span class="tag accent">${esc(STATUS.find(([k]) => k === status)[1])}</span>` : ''}${reviewTags(o.id)}</div>
       <div class="muted small">${pt(init ? firstSentence(init.why) : firstSentence(o.rationale))}</div>
       <div class="actions">${pkgOf(o.id) ? `<button type="button" class="ws-btn primary sm" data-build="${o.id}">⚡ Build this for me</button><button type="button" class="ws-btn sm" data-walk="${o.id}">🧭 Walk me through it</button>` : ''}</div></div>`;
   }
@@ -435,7 +448,7 @@
     const was = o.rank && o.rank !== o.eff.rank ? `<small>was #${o.rank}</small>` : '';
     const open = view.openMove === o.id || (!view.openMove && o.eff.rank === 1);
     return `<div class="move" id="move-${o.id}"><div class="move-head"><div class="num">#${o.eff.rank}${was}</div><div><h3>${esc(o.title)}${o.goalFit ? ' <span class="tag good" style="vertical-align:3px">Fits your goal</span>' : ''}</h3>
-        <div class="tags"><span class="tag">Confidence: ${CONF[o.eff.confidence][0]}</span><span class="tag">Effort: ${EFF[o.eff.effort][0]}</span><span class="tag">~${o.timeToSignalWeeks} weeks to know</span><span class="tag">${esc(o.area)}</span>${o.eff.edited ? '<span class="tag warn">Edited</span>' : ''}</div></div>
+        <div class="tags"><span class="tag">Confidence: ${CONF[o.eff.confidence][0]}</span><span class="tag">Effort: ${EFF[o.eff.effort][0]}</span><span class="tag">~${o.timeToSignalWeeks} weeks to know</span><span class="tag">${esc(o.area)}</span>${o.eff.edited ? '<span class="tag warn">Edited</span>' : ''}${reviewTags(o.id)}</div></div>
         <div class="impact"><div class="big">${usd(o.eff.impact)}<span class="muted" style="font-size:14px;font-weight:500">/yr</span></div><div class="small">score ${usd(o.eff.score)}</div></div></div>
       <div class="move-controls">${pkg ? `<button type="button" class="ws-btn primary" data-build="${o.id}">⚡ Build this for me</button><button type="button" class="ws-btn" data-walk="${o.id}">🧭 Walk me through it</button>` : ''}
         <select data-status="${o.id}" class="status-${status || 'none'}" aria-label="Status">${STATUS.map(([k, l]) => `<option value="${k}" ${k === status ? 'selected' : ''}>${l}</option>`).join('')}</select>
@@ -566,7 +579,7 @@
       <ul class="build-log">${pk.buildLog.map((l, i) => `<li class="${i < b.log ? 'done' : i === b.log ? 'now' : ''}"><span class="st">${i < b.log ? '✓' : ''}</span>${esc(l)}</li>`).join('')}</ul></div>`;
   }
   function kitView(pk) {
-    return `<div class="kit"><div class="kit-side">
+    return `<div class="kit"><div class="kit-side">${kitBanner(view.build.id)}
         <div><h4>Why this is worth building</h4><ul>${pk.plainCase.map((s) => `<li>${pt(s)}</li>`).join('')}</ul></div>
         <div><h4>What you get</h4><p style="margin:0 0 6px">${esc(pk.summary)}</p><p class="muted small" style="margin:0"><b>Paired messages:</b> ${esc(pk.comms)}</p></div>
         <div><h4>The test</h4><table class="ws-table"><tr><td class="muted">Split</td><td>${esc(pk.test.split)}</td></tr><tr><td class="muted">Measure</td><td>${esc(pk.test.metric)}</td></tr><tr><td class="muted">Watch</td><td>${esc(pk.test.guardrail)}</td></tr><tr><td class="muted">How long</td><td>${esc(pk.test.runFor)}</td></tr><tr><td class="muted">Using</td><td>${esc(pk.test.tool)}</td></tr></table></div>
@@ -580,7 +593,7 @@
     const assets = (s.assets || []).map((id) => pk.assets.find((a) => a.id === id)).filter(Boolean);
     return `<div class="walk"><div class="walk-steps">${pk.walkthrough.map((w, i) => `<button type="button" data-step="${i}" aria-current="${i === b.step}" class="${done[i] ? 'done' : ''}"><span class="n2">${done[i] ? '✓' : i + 1}</span><span>${esc(w.title)}<br><span class="dim small">~${w.minutes} min</span></span></button>`).join('')}
         <div class="dim small" style="padding:12px 10px">About ${pk.walkthrough.reduce((t, w) => t + w.minutes, 0)} minutes in total.</div></div>
-      <div class="walk-main"><div class="dim small">Step ${b.step + 1} of ${pk.walkthrough.length} · about ${s.minutes} minutes</div><h3>${esc(s.title)}</h3><div><span class="crumb">📍 ${esc(s.where)}</span></div>
+      <div class="walk-main">${kitBanner(view.build.id)}<div class="dim small">Step ${b.step + 1} of ${pk.walkthrough.length} · about ${s.minutes} minutes</div><h3>${esc(s.title)}</h3><div><span class="crumb">📍 ${esc(s.where)}</span></div>
         <ol class="do-list">${s.do.map((d) => `<li>${pt(d)}</li>`).join('')}</ol>
         ${s.values?.length ? `<div class="values">${s.values.map((v) => `<div><span>${esc(v.label)}</span><b>${esc(v.value)}</b><button type="button" class="copy" data-copy="${esc(v.value)}">Copy</button></div>`).join('')}</div>` : ''}
         <div class="whybox"><b>Why this matters:</b> ${pt(s.why)}</div>
@@ -644,6 +657,156 @@
     return '';
   }
 
+  /* ---------------- quick review: a deck of strategy "profiles" ---------------- */
+  const REQS = ['Less work for us', 'Test it small first', 'Cheaper to run', 'Softer, less salesy', 'Go bigger', 'Use our brand voice'];
+  const LOOK = { Storefront: ['🛍️', '#4A2440', '#1F2E4A'], 'Email & SMS': ['✉️', '#4A3F17', '#1E2B3F'], Subscriptions: ['☕', '#3A2D5C', '#1C2A40'], Support: ['🎧', '#5A3322', '#1C2A40'], 'Paid & social': ['📣', '#1E3560', '#2A2140'] };
+  const rv = { open: false, i: 0, anim: null, learn: false, summary: false, enter: false };
+  const deck = () => (S().reviewDeck || []).filter((c) => (S().priorities || []).some((o) => o.id === c.opportunityId && o.rank));
+  const rstate = (id) => (ws.data.review[id] ||= { decision: null, picks: [], requests: [], note: '' });
+  const decided = (c) => !!ws.data.review[c.opportunityId]?.decision;
+  const reviewCount = () => deck().filter(decided).length;
+  function openReview(summary = false) {
+    const d = deck(), next = d.findIndex((c) => !decided(c));
+    Object.assign(rv, { open: true, summary: summary || next < 0, i: next < 0 ? 0 : next, learn: false, anim: null, enter: true });
+    renderReview(true);
+  }
+  function closeReview() { rv.open = false; renderReview(); renderedKey = ''; GP().invalidate(); }
+  function decide(kind) {
+    const d = deck(), c = d[rv.i];
+    if (!c || rv.anim) return;
+    const r = rstate(c.opportunityId);
+    r.decision = kind; r.at = new Date().toISOString();
+    if (kind === 'love' && !r.picks.length) { const rec = c.options.find((o) => o.recommended); if (rec) r.picks = [rec.id]; }
+    changed(false);
+    rv.anim = kind === 'love' ? 'fly-right' : 'fly-left';
+    renderReview(true);
+    setTimeout(() => {
+      rv.anim = null; rv.learn = false; rv.enter = true;
+      const after = d.findIndex((x, k) => k > rv.i && !decided(x)), any = d.findIndex((x) => !decided(x));
+      if (after >= 0) rv.i = after; else if (any >= 0) rv.i = any; else rv.summary = true;
+      ws.version++; renderReview(true); GP().invalidate();
+    }, 320);
+  }
+  const moneyOf = (o) => (o?.eff ? o.eff.impact : o?.annualImpact || 0);
+  function ring(pctv) {
+    const R = 24, C = 2 * Math.PI * R;
+    return `<div class="rv-match"><svg viewBox="0 0 58 58"><circle cx="29" cy="29" r="${R}" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="5"/><circle cx="29" cy="29" r="${R}" fill="none" stroke="#FF6B8B" stroke-width="5" stroke-linecap="round" stroke-dasharray="${(C * pctv) / 100} ${C}"/></svg><span>${pctv}%<small>match</small></span></div>`;
+  }
+  function reviewCard(c, cls) {
+    const o = effective().find((x) => x.id === c.opportunityId);
+    const [ico, a, b] = LOOK[o?.area] || ['✨', '#2E2548', '#1C2A40'];
+    const r = ws.data.review[c.opportunityId] || { picks: [], requests: [], note: '' };
+    const hero = `<div class="rv-hero" style="--rv-a:${a};--rv-b:${b}"><div class="ico">${ico}</div><div class="rank"><b>#${o?.eff?.rank ?? '–'}</b>${ring(c.match)}</div>
+      <h3>${esc(o?.title || c.opportunityId)}</h3><div class="money">${usd(moneyOf(o))}<small> / year at full strength</small></div>
+      <div class="tags"><span class="tag">${EFF[o?.eff?.effort || o?.effort || 'S'][0]} effort</span><span class="tag">~${o?.timeToSignalWeeks ?? '?'} weeks to know</span>${o?.goalFit ? '<span class="tag">Fits your goal</span>' : ''}</div></div>`;
+    if (cls !== 'main') return `<div class="rv-card ${cls}" aria-hidden="true">${hero}</div>`;
+    const init = initOf(c.opportunityId), hasKit = !!pkgOf(c.opportunityId);
+    return `<div class="rv-card ${rv.anim || ''} ${rv.enter && !rv.anim ? 'enter' : ''}" role="group" aria-label="${esc(o?.title || '')}">
+      ${rv.anim === 'fly-right' ? '<div class="rv-stamp love">SAVED ♥</div>' : rv.anim === 'fly-left' ? '<div class="rv-stamp pass">PASS</div>' : ''}
+      ${hero}<div class="rv-body">
+        <p class="rv-bio">${esc(c.bio)}</p>
+        <div class="rv-why">${c.matchWhy.map((w) => `<span>${esc(w)}</span>`).join('')}</div>
+        <div><div class="rv-label">Pick your version · choose one or more</div><div class="rv-opts">${c.options.map((op, k) => {
+          const on = r.picks.includes(op.id), off = !!op.needs;
+          return `<button type="button" class="rv-opt" data-rv="pick:${esc(op.id)}" aria-pressed="${on}" ${off ? 'disabled' : ''}><span class="box">${on ? '✓' : k + 1}</span>
+            <span><b>${esc(op.label)}</b>${op.recommended ? '<span class="rv-pick">Crew\'s pick</span>' : ''}<p>${esc(op.pitch)}</p>
+            <span class="pc">${op.pros.map((p) => `<span class="p">+ ${esc(p)}</span>`).join('')}${op.cons.map((p) => `<span class="c">– ${esc(p)}</span>`).join('')}</span>
+            <div class="best">${off ? `🔒 Needs ${esc(op.needs.map((n) => GP().srcLabel(n)).join(', '))} connected` : `Best if: ${esc(op.bestIf)}`}</div></span>
+            <span class="val">${usd(op.impact)}<small>/ year · ${EFF[op.effort][0].toLowerCase()} effort</small></span></button>`;
+        }).join('')}</div></div>
+        <div><div class="rv-label">Tweak it</div><div class="rv-chips">${REQS.map((q) => `<button type="button" data-rv="req:${esc(q)}" aria-pressed="${r.requests.includes(q)}">${esc(q)}</button>`).join('')}</div></div>
+        <textarea class="rv-note" data-rv-note="${esc(c.opportunityId)}" placeholder="Notes or requests for this move, e.g. “use 15% instead of 10%” or “ask Priya first”">${esc(r.note)}</textarea>
+        ${rv.learn ? `<div class="rv-more"><div class="rv-label">Why this, why now</div><div>${pt(init ? init.why : o?.rationale || '')}</div>${init ? `<div class="rv-label" style="margin-top:12px">How it works</div><ol>${init.steps.map((s) => `<li>${pt(s)}</li>`).join('')}</ol>` : ''}
+          ${hasKit ? `<div class="tags"><button type="button" class="ws-btn primary sm" data-rv="kit:build">⚡ See the build kit</button><button type="button" class="ws-btn sm" data-rv="kit:walk">🧭 Walk me through it</button></div>` : ''}</div>` : ''}
+      </div></div>`;
+  }
+  function reviewSummary() {
+    const d = deck();
+    const loved = d.filter((c) => ws.data.review[c.opportunityId]?.decision === 'love');
+    const passed = d.filter((c) => ws.data.review[c.opportunityId]?.decision === 'pass');
+    const left = d.filter((c) => !decided(c));
+    const labels = (c) => { const r = ws.data.review[c.opportunityId]; return c.options.filter((op) => r.picks.includes(op.id)).map((op) => op.label).join(' + ') || 'No version picked yet'; };
+    const value = loved.reduce((s, c) => { const r = ws.data.review[c.opportunityId]; const picked = c.options.filter((op) => r.picks.includes(op.id)); return s + (picked.length ? Math.max(...picked.map((op) => op.impact)) : 0); }, 0);
+    const item = (c, kind) => { const o = effective().find((x) => x.id === c.opportunityId); const r = ws.data.review[c.opportunityId] || {};
+      return `<div class="rv-item"><div class="heart">${kind === 'love' ? '💖' : kind === 'pass' ? '✕' : '…'}</div><div><h4>#${o?.eff?.rank ?? '–'} ${esc(o?.title || '')}</h4><div class="muted">${kind === 'love' ? esc(labels(c)) : kind === 'pass' ? 'Passed for now' : 'Not reviewed yet'}${r.requests?.length ? ` · asked for: ${esc(r.requests.join(', '))}` : ''}${r.note ? ` · “${esc(r.note)}”` : ''}</div></div>
+        <div class="tags">${kind === 'pass' ? `<button type="button" class="ws-btn sm" data-rv="undo:${esc(c.opportunityId)}">Undo</button>` : ''}<button type="button" class="ws-btn sm" data-rv="goto:${d.indexOf(c)}">${kind === 'love' ? 'Edit' : 'Review'}</button></div></div>`; };
+    return `<div class="rv-summary"><div class="dim small">Quick review</div><h2>${left.length ? `You've reviewed ${d.length - left.length} of ${d.length}` : 'Your shortlist'}</h2>
+      <p class="muted">${loved.length ? `You saved ${loved.length} move${loved.length > 1 ? 's' : ''}, worth about <b>${usd(value)}</b> a year in the versions you picked. They're marked in your action plan, and each build kit uses your pick.` : 'Nothing saved yet. Heart a move to add it to your shortlist.'}</p>
+      <div class="tags" style="margin:12px 0">${left.length ? `<button type="button" class="ws-btn primary" data-rv="resume">Pick up where you left off</button>` : ''}<button type="button" class="ws-btn ${left.length ? '' : 'primary'}" data-rv="plan">Open the action plan</button><button type="button" class="ws-btn" data-rv="restart">Start over</button></div>
+      ${loved.length ? `<div class="rv-label" style="margin-top:18px">Saved</div><div class="rv-list">${loved.map((c) => item(c, 'love')).join('')}</div>` : ''}
+      ${left.length ? `<div class="rv-label" style="margin-top:18px">Still to review</div><div class="rv-list">${left.map((c) => item(c, 'left')).join('')}</div>` : ''}
+      ${passed.length ? `<div class="rv-label" style="margin-top:18px">Passed</div><div class="rv-list">${passed.map((c) => item(c, 'pass')).join('')}</div>` : ''}</div>`;
+  }
+  let reviewKey = '';
+  function renderReview(force) {
+    let wrap = document.getElementById('ws-review');
+    if (!rv.open) { if (wrap) wrap.remove(); reviewKey = ''; return; }
+    const d = deck();
+    const key = `${rv.i}:${rv.anim}:${rv.learn}:${rv.summary}:${ws.version}:${d.length}`;
+    if (!force && wrap && key === reviewKey) return;
+    if (wrap && wrap.contains(document.activeElement) && document.activeElement.matches('textarea') && !force) return;
+    reviewKey = key;
+    if (!wrap) {
+      wrap = document.createElement('div'); wrap.id = 'ws-review'; wrap.className = 'rv-wrap ws';
+      wrap.style.display = 'flex';
+      wrap.addEventListener('click', onReviewClick);
+      wrap.addEventListener('input', (e) => { const id = e.target.dataset?.rvNote; if (id) { rstate(id).note = e.target.value; changed(false); } });
+      document.body.appendChild(wrap);
+    }
+    const done = reviewCount();
+    const upcoming = d.filter((c, k) => k > rv.i && !decided(c)).slice(0, 2);
+    wrap.innerHTML = `<div class="rv-top"><h2>💘 Quick review</h2><span class="dim small">${done} of ${d.length} reviewed · saved as you go</span>
+        <div class="rv-dots">${d.map((c, k) => `<i class="${ws.data.review[c.opportunityId]?.decision || ''} ${k === rv.i && !rv.summary ? 'now' : ''}" data-rv="goto:${k}" title="${esc(effective().find((o) => o.id === c.opportunityId)?.title || '')}"></i>`).join('')}</div>
+        <span class="grow"></span><button type="button" class="ws-btn sm" data-rv="summary">💖 Shortlist ${d.filter((c) => ws.data.review[c.opportunityId]?.decision === 'love').length}</button><button type="button" class="ws-btn ghost" data-rv="close" aria-label="Close">✕</button></div>
+      <div class="rv-stage">${rv.summary ? reviewSummary() : `<div class="rv-deck">${upcoming.slice().reverse().map((c, k, arr) => reviewCard(c, arr.length - k === 2 ? 'behind2' : 'behind1')).join('')}${d[rv.i] ? reviewCard(d[rv.i], 'main') : ''}</div>`}</div>
+      ${rv.summary ? '' : `<div class="rv-actions"><button type="button" class="rv-btn small" data-rv="back" title="Back (↑)" aria-label="Back">↶</button><button type="button" class="rv-btn pass" data-rv="pass" title="Pass (←)" aria-label="Pass">✕</button><button type="button" class="rv-btn love" data-rv="love" title="Save (→)" aria-label="Save">♥</button><button type="button" class="rv-btn small ${rv.learn ? 'on' : ''}" data-rv="learn" title="Learn more (L)" aria-label="Learn more">ℹ</button></div>
+      <div class="rv-hint">← pass · → save · 1–3 pick a version · L learn more · ${ws.data.review[d[rv.i]?.opportunityId]?.decision ? `you ${ws.data.review[d[rv.i].opportunityId].decision === 'love' ? 'saved' : 'passed on'} this one` : 'not decided yet'}</div>`}`;
+    rv.enter = false;
+  }
+  function onReviewClick(e) {
+    const t = e.target.closest('[data-rv]'); if (!t) return;
+    const [cmd, arg] = t.dataset.rv.split(/:(.*)/s);
+    const d = deck(), c = d[rv.i];
+    if (cmd === 'close') return closeReview();
+    if (cmd === 'love' || cmd === 'pass') return decide(cmd);
+    if (cmd === 'back') { const prev = rv.i - 1; if (prev >= 0) { rv.i = prev; rv.learn = false; rv.enter = true; renderReview(true); } return; }
+    if (cmd === 'learn') { rv.learn = !rv.learn; renderReview(true); return; }
+    if (cmd === 'summary') { rv.summary = true; renderReview(true); return; }
+    if (cmd === 'resume') { const n = d.findIndex((x) => !decided(x)); rv.summary = false; rv.i = n < 0 ? 0 : n; rv.enter = true; renderReview(true); return; }
+    if (cmd === 'goto') { rv.summary = false; rv.i = Number(arg); rv.learn = false; rv.enter = true; renderReview(true); return; }
+    if (cmd === 'restart') { if (!window.confirm('Clear every heart, pass and pick and start the review again? Your notes stay.')) return; for (const k of Object.keys(ws.data.review)) { ws.data.review[k].decision = null; ws.data.review[k].picks = []; } rv.summary = false; rv.i = 0; changed(false); ws.version++; renderReview(true); return; }
+    if (cmd === 'plan') { closeReview(); view.section = 'plan'; renderedKey = ''; GP().invalidate(); return; }
+    if (cmd === 'undo') { rstate(arg).decision = null; changed(false); ws.version++; renderReview(true); return; }
+    if (cmd === 'kit') { const id = c?.opportunityId; closeReview(); if (id) openSheet(id, arg); return; }
+    if (!c) return;
+    const r = rstate(c.opportunityId);
+    if (cmd === 'pick') { r.picks = r.picks.includes(arg) ? r.picks.filter((x) => x !== arg) : [...r.picks, arg]; changed(false); ws.version++; renderReview(true); return; }
+    if (cmd === 'req') { r.requests = r.requests.includes(arg) ? r.requests.filter((x) => x !== arg) : [...r.requests, arg]; changed(false); ws.version++; renderReview(true); return; }
+  }
+  document.addEventListener('keydown', (e) => {
+    if (!rv.open || e.target.matches?.('textarea, input')) return;
+    if (e.key === 'Escape') { closeReview(); return; }
+    if (rv.summary) return;
+    const c = deck()[rv.i];
+    if (e.key === 'ArrowLeft') { e.preventDefault(); decide('pass'); }
+    else if (e.key === 'ArrowRight') { e.preventDefault(); decide('love'); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); onReviewClick({ target: { closest: () => ({ dataset: { rv: 'back' } }) } }); }
+    else if (e.key.toLowerCase() === 'l') { rv.learn = !rv.learn; renderReview(true); }
+    else if (/^[1-3]$/.test(e.key) && c) { const op = c.options[Number(e.key) - 1]; if (op && !op.needs) onReviewClick({ target: { closest: () => ({ dataset: { rv: `pick:${op.id}` } }) } }); }
+  });
+  function reviewTags(id) {
+    const r = ws.data.review[id]; if (!r?.decision) return '';
+    const c = (S().reviewDeck || []).find((x) => x.opportunityId === id);
+    const picks = c ? c.options.filter((op) => r.picks.includes(op.id)).map((op) => op.label) : [];
+    return r.decision === 'love' ? `<span class="tag" style="color:#FF8FA8;border-color:rgba(255,107,139,.45);background:rgba(255,107,139,.08)">♥ Saved${picks.length ? ` · ${esc(picks.join(' + '))}` : ''}</span>` : '<span class="tag">✕ You passed</span>';
+  }
+  function kitBanner(id) {
+    const r = ws.data.review[id]; if (!r || (!r.picks.length && !r.requests.length && !r.note)) return '';
+    const c = (S().reviewDeck || []).find((x) => x.opportunityId === id);
+    const picks = c ? c.options.filter((op) => r.picks.includes(op.id)).map((op) => op.label) : [];
+    return `<div class="rv-kit-banner">${picks.length ? `<b>Your pick:</b> ${esc(picks.join(' + '))}. ` : ''}${r.requests.length ? `<b>You asked for:</b> ${esc(r.requests.join(', '))}. ` : ''}${r.note ? `<b>Your note:</b> “${esc(r.note)}”` : ''}</div>`;
+  }
+
   /* ---------------- rail: comments and notes ---------------- */
   function renderRail() {
     const rail = document.getElementById('ws-rail');
@@ -676,6 +839,7 @@
     const t = e.target.closest('button, [data-journey], [data-goto-move], .item[data-goto-move]');
     if (!t) return;
     const d = t.dataset;
+    if (d.reviewOpen != null) { openReview(); return; }
     if (d.section) { view.section = d.section; document.getElementById('ws-main')?.scrollTo(0, 0); GP().invalidate(); return; }
     if (d.journey && !t.matches('.seg button') && t.classList.contains('persona')) { view.section = 'journeys'; view.journey = d.journey; GP().invalidate(); return; }
     if (d.journey) { view.journey = d.journey; GP().invalidate(); return; }

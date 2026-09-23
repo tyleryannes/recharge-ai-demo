@@ -28,8 +28,17 @@
   sources; storefront pages; portal, Quick Action and notification data from Skio; more for Klaviyo, Postscript,
   Meta and TikTok Shop. Run cost stays under the spec's $15 and about 9 minutes of recorded time.
 
+- **Quick review.** After the crew finishes, each move becomes a "profile" card: a match score against the
+  merchant's goal, timeframe, capacity and constraints, a short bio, and 2–3 versions to pick from (one or
+  several), each with its own yearly value, pros, cons and "best if". Heart it to save it, pass, open "learn more",
+  tap quick requests ("Test it small first", "Less work for us"…) or write a note. Keys: ← pass, → save,
+  1–3 pick, L learn more, ↑ back. Progress saves as you go and "pick up where you left off" resumes at the next
+  undecided card; the shortlist shows what you saved and what it's worth. Picks, requests and notes show on the
+  action plan and at the top of each build kit and walkthrough. Versions that need a switched-off source are
+  locked, and the crew's pick moves to one that can be used.
+
 Deep links for demos: `?run=<id>&section=journeys|analytics|strategy|audit|plan|tests|sources`,
-`&journey=subscriber`, `&build=o2` or `&walk=o1` to open a build kit or walkthrough.
+`&journey=subscriber`, `&build=o2` or `&walk=o1` to open a build kit or walkthrough, `&review=1` to open Quick review.
 
 `./node_modules/.bin/tsx scripts/smoke-run.ts` builds the run under several source toggles and checks it.
 

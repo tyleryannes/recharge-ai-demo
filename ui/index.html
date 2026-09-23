@@ -707,7 +707,7 @@
     ledger: new Map(), webFindings: [], profile: null, opps: null, priorities: null, plan: null, tests: null,
     dataClaims: [], reportCounts: null, planVersion: 0,
     // V3
-    journeys: {}, journeySteps: {}, analytics: null, scorecard: null, strategy: null, packages: null,
+    journeys: {}, journeySteps: {}, analytics: null, scorecard: null, strategy: null, packages: null, reviewDeck: null,
   });
   const state = { runId: null, selected: ALL, stick: true, ...freshRun() };
   const allEvents = [];       // every event of this run, in order, for replay
@@ -801,6 +801,7 @@
       case 'analytics.pack': state.analytics = ev.pack; state.scorecard = ev.scorecard; pushTrace('growth-analyst', { kind: 'analytics', pack: ev.pack, scorecard: ev.scorecard }, ev.t); state.planVersion++; break;
       case 'strategy.stack': state.strategy = ev.strategy; pushTrace('sub-strategist', { kind: 'strategy', strategy: ev.strategy }, ev.t); state.planVersion++; break;
       case 'build.packages': state.packages = ev.packages; pushTrace('build-kits', { kind: 'kits', packages: ev.packages }, ev.t); state.planVersion++; break;
+      case 'review.deck': state.reviewDeck = ev.cards; state.planVersion++; break;
     }
     if (office && !state.v2 && !rebuilding && !(backlog && !replay.active)) {
       office.onEvent(ev);

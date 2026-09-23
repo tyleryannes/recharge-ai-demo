@@ -19,7 +19,7 @@ import type {
   StoreProfile,
   TestPlan,
 } from './v2/types.js';
-import type { AnalyticsPack, AreaScore, BuildPackage, Journey, JourneyStep, SubscriptionStrategy } from './v3/types.js';
+import type { AnalyticsPack, AreaScore, BuildPackage, Journey, JourneyStep, ReviewCard, SubscriptionStrategy } from './v3/types.js';
 
 export type StageId =
   | 'brief'
@@ -200,7 +200,9 @@ export type RunEventBody =
   | { type: 'journey.done'; agentId: string; journey: Journey }
   | { type: 'analytics.pack'; pack: AnalyticsPack; scorecard: AreaScore[] }
   | { type: 'strategy.stack'; strategy: SubscriptionStrategy }
-  | { type: 'build.packages'; packages: BuildPackage[] };
+  | { type: 'build.packages'; packages: BuildPackage[] }
+  /** Quick review: 2–3 versions of each ranked move for the merchant to pick from. */
+  | { type: 'review.deck'; cards: ReviewCard[] };
 
 export type RunEvent = RunEventBody & {
   /** Position in the run's stream; the SSE id and the replay cursor. */

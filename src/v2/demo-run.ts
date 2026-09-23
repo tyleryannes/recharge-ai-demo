@@ -36,6 +36,7 @@ import type {
 import { WEB_FINDINGS, type WebFinding } from './web-corpus.js';
 import { buildAnalytics, buildScorecard, buildStrategy } from '../v3/analytics.js';
 import { buildPackages } from '../v3/builds.js';
+import { buildReviewDeck } from '../v3/review.js';
 import type { Ctx } from '../v3/ctx.js';
 import { JOURNEY_AGENTS, buildJourneys } from '../v3/journeys.js';
 
@@ -1151,6 +1152,7 @@ ${start.map((w) => `- ${w}`).join('\n')}
   packages.slice(0, 4).forEach((pk, i) => at(plStart + 14_000 + i * 11_000, { type: 'agent.text', agentId: 'build-kits', text: `Kit ${i + 1}: ${pk.title}. ${pk.assets.length} pieces: ${[...new Set(pk.assets.map((a) => a.platform))].join(', ')}.` }));
   at(bkEnd, { type: 'agent.completed', agentId: 'build-kits', durationMs: bkEnd - plStart - 1_500, usage: usage(1.2, 4, 110_000, 22_600) });
   at(bkEnd + 50, { type: 'build.packages', packages });
+  at(bkEnd + 80, { type: 'review.deck', cards: buildReviewDeck(ctx, ranked) });
 
   // ---------------- fact-check ----------------
   const fcStart = bkEnd + 1_000;

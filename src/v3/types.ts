@@ -229,3 +229,31 @@ export interface BuildPackage {
   walkthrough: WalkStep[];
   buildLog: string[];
 }
+
+// ---------- Quick review: pick a version of each move ----------
+
+export interface ReviewOption {
+  id: string;
+  label: string;
+  /** What this version is, in one or two plain sentences. */
+  pitch: string;
+  pros: string[];
+  cons: string[];
+  /** Yearly value for this version, computed from the move's own maths. */
+  impact: number;
+  effort: 'S' | 'M' | 'L';
+  bestIf: string;
+  recommended?: boolean;
+  /** Sources this version needs; if one is off, the version is shown but can't be picked. */
+  needs?: string[];
+}
+
+export interface ReviewCard {
+  opportunityId: string;
+  /** A one-line "bio" for the move. */
+  bio: string;
+  /** 0–100: how well it fits the merchant's goal, timeframe, capacity and constraints. */
+  match: number;
+  matchWhy: string[];
+  options: ReviewOption[];
+}
