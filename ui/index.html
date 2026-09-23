@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Research crew</title>
+<title>Growth Planner</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&display=swap" rel="stylesheet">
 <style>
@@ -354,18 +354,245 @@
     .panels > section { overflow: visible; padding: 16px; }
     .trace { border-right: 0; border-bottom: 1px solid var(--line); }
   }
+
+  /* ================= V2: growth planner ================= */
+  :root {
+    --lane-intake: #8FA1B3;
+    --lane-audit-analytics: #7FC97F;
+    --lane-audit-catalog: #A9D66B;
+    --lane-audit-lifecycle: #F5B94A;
+    --lane-audit-paid: #6FA8F5;
+    --lane-audit-subs: #B98CF0;
+    --lane-audit-stack: #9FB2C4;
+    --lane-audit-assembly: #EAF0F5;
+    --lane-research-benchmarks: #4DB6C8;
+    --lane-research-competitors: #F0876A;
+    --lane-research-trends: #A77BE0;
+    --lane-opportunities: #EAF0F5;
+    --lane-prioritise: #FFB38A;
+    --lane-plan: #7DD3C0;
+    --src-shopify: #8DB845; --src-klaviyo: #F0C75E; --src-sms: #7AA7FF; --src-meta: #5B8DEF;
+    --src-tiktok: #EE5A7A; --src-tiktokshop: #4FD1C5; --src-skio: #B28BF5;
+    --warn: #F5B94A;
+  }
+  .map svg.v2 .label { font-size: 13.5px; }
+  .map svg.v2 .sub { font-size: 11.5px; }
+  .pill.recomputed { color: var(--ok); border-color: var(--ok); }
+  .pill.mismatch { color: var(--warn); border-color: var(--warn); }
+  .demo-banner {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: rgba(245,185,74,.1); border: 1px solid rgba(245,185,74,.35); color: #F7D08A;
+    border-radius: 8px; padding: 6px 12px; font-size: 13.5px;
+  }
+  .demo-banner strong { color: var(--live); font-weight: 600; }
+  .demo-tag { display: inline-block; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--live); border: 1px solid rgba(245,185,74,.5); border-radius: 4px; padding: 0 5px; vertical-align: 1px; }
+  .mode-toggle { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .mode-toggle button { background: transparent; border: 0; padding: 5px 14px; color: var(--muted); cursor: pointer; }
+  .mode-toggle button + button { border-left: 1px solid var(--line); }
+  .mode-toggle button[aria-pressed="true"] { background: var(--text); color: var(--ink); font-weight: 600; }
+  .skip-btn { background: var(--live); color: var(--ink); border: 0; border-radius: 6px; padding: 5px 12px; font-weight: 600; cursor: pointer; }
+
+  /* Ask → Clarify → Connect */
+  .flow { grid-row: 2 / 5; overflow: auto; padding: 8px 32px 48px; }
+  .flow-inner { max-width: 920px; margin: 0 auto; }
+  .steps { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 22px; color: var(--dim); font-size: 13px; }
+  .steps span { padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); }
+  .steps span.on { color: var(--ink); background: var(--text); border-color: var(--text); font-weight: 600; }
+  .steps span.done { color: var(--muted); }
+  .flow h1 { font-size: clamp(26px, 3vw, 38px); line-height: 1.12; letter-spacing: -.02em; font-weight: 600; margin: 0 0 8px; font-variation-settings: "opsz" 72; }
+  .flow .lede { color: var(--muted); margin: 0 0 22px; max-width: 62ch; }
+  .store-chip { display: inline-flex; align-items: center; gap: 10px; background: var(--ink-2); border: 1px solid var(--line); border-radius: 999px; padding: 5px 14px 5px 6px; margin-bottom: 18px; font-size: 14px; }
+  .store-chip .logo { width: 26px; height: 26px; border-radius: 50%; background: #6b4530; display: grid; place-items: center; font-weight: 700; font-size: 12px; color: #fbeee0; }
+  .ask-box { background: var(--ink-2); border: 1px solid var(--line); border-radius: 14px; padding: 8px 8px 12px 20px; }
+  .ask-box:focus-within { border-color: var(--live); }
+  .ask-box textarea { display: block; width: 100%; min-height: 86px; resize: none; background: transparent; border: 0; padding: 14px 12px 8px 0; font-size: 21px; line-height: 1.35; color: var(--text); }
+  .ask-box textarea:focus { outline: none; }
+  .ask-box textarea::placeholder { color: var(--dim); }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip {
+    background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 6px 13px;
+    color: var(--muted); cursor: pointer; font-size: 14px; text-align: left;
+  }
+  .chip:hover { color: var(--text); border-color: var(--muted); }
+  .primary-btn { background: var(--text); color: var(--ink); border: 0; border-radius: 9px; padding: 10px 18px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .primary-btn:disabled { opacity: .5; cursor: default; }
+  .link-btn { background: none; border: 0; color: var(--muted); cursor: pointer; padding: 0; border-bottom: 1px solid var(--line); }
+  .link-btn:hover { color: var(--text); }
+  .qcard { background: var(--ink-2); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin-bottom: 12px; }
+  .qcard h3 { margin: 0 0 2px; font-size: 17px; font-weight: 600; }
+  .qcard .hint { color: var(--dim); font-size: 13px; margin-bottom: 12px; }
+  .opts { display: flex; flex-wrap: wrap; gap: 8px; }
+  .opt {
+    display: grid; gap: 2px; text-align: left; background: transparent; border: 1px solid var(--line);
+    border-radius: 10px; padding: 8px 12px; cursor: pointer; color: var(--text); max-width: 100%;
+  }
+  .opt:hover { border-color: var(--muted); }
+  .opt[aria-pressed="true"] { border-color: var(--live); background: rgba(245,185,74,.08); }
+  .opt .lbl { font-size: 14.5px; font-weight: 500; }
+  .opt .lbl::before { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--dim); margin-right: 8px; vertical-align: 0; }
+  .opt[aria-pressed="true"] .lbl::before { background: var(--live); border-color: var(--live); }
+  .opt .why { font-size: 12.5px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  .other-input { background: transparent; border: 1px dashed var(--line); border-radius: 10px; padding: 8px 12px; color: var(--text); min-width: 220px; }
+  .other-input:focus { outline: none; border-color: var(--live); border-style: solid; }
+  .flow-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
+  .src-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .src-card { background: var(--ink-2); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 8px; }
+  .src-card.off { opacity: .55; }
+  .src-card .top { display: flex; align-items: center; gap: 10px; }
+  .src-card .name { font-weight: 600; flex: 1; }
+  .src-card .kind { color: var(--dim); font-size: 12.5px; font-weight: 400; display: block; }
+  .src-card .provides { color: var(--muted); font-size: 13.5px; }
+  .src-card .state { font-size: 13px; display: flex; align-items: center; gap: 6px; color: var(--ok); }
+  .src-card.off .state { color: var(--dim); }
+  .mono { width: 30px; height: 30px; border-radius: 8px; display: inline-grid; place-items: center; font-size: 12px; font-weight: 700; color: #14202E; background: var(--muted); flex: none; }
+  .mono.sm { width: 18px; height: 18px; border-radius: 5px; font-size: 9px; }
+  .switch { position: relative; width: 40px; height: 22px; border-radius: 999px; background: var(--line); border: 0; cursor: pointer; flex: none; }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--muted); transition: left .15s; }
+  .switch[aria-checked="true"] { background: var(--ok); }
+  .switch[aria-checked="true"]::after { left: 21px; background: var(--ink); }
+  .switch:disabled { opacity: .6; cursor: default; }
+  .speed-pick { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; }
+
+  /* Trace entries for store tools and planner outputs */
+  .entry.tool .body { display: flex; gap: 8px; align-items: flex-start; }
+  .entry.tool .ids { margin-top: 3px; display: flex; flex-wrap: wrap; gap: 3px; align-items: center; color: var(--dim); font-size: 13px; }
+  .sev { display: inline-block; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; border-radius: 4px; padding: 1px 5px; margin-right: 6px; vertical-align: 1px; }
+  .sev.high { color: var(--bad); border: 1px solid var(--bad); }
+  .sev.med { color: var(--warn); border: 1px solid var(--warn); }
+  .sev.low { color: var(--muted); border: 1px solid var(--dim); }
+  .sev.good { color: var(--ok); border: 1px solid var(--ok); }
+  ul.plain { list-style: none; margin: 6px 0 0; padding: 0; }
+  ul.plain li { padding: 3px 0; }
+
+  /* [dN] store-data pills and [cN] web-claim pills */
+  .dref, .claim {
+    display: inline-block; font-size: 11px; font-weight: 700; line-height: 1; padding: 3px 5px; margin: 0 1px 0 3px;
+    border-radius: 4px; vertical-align: 2px; cursor: pointer; border: 1px solid var(--dim); color: var(--muted); font-style: normal;
+  }
+  .dref { border-color: rgba(125,211,192,.6); color: #9FE3D4; background: rgba(125,211,192,.07); }
+  .dref.recomputed { border-color: var(--ok); color: var(--ok); }
+  .dref.mismatch { border-color: var(--warn); color: var(--warn); background: rgba(245,185,74,.12); }
+  .dref.active, .claim.active { background: var(--ink-3); }
+  .pop {
+    position: fixed; z-index: 30; max-width: 380px; background: var(--ink-2); border: 1px solid var(--line);
+    border-radius: 10px; padding: 12px 14px; font-size: 14px; box-shadow: 0 12px 30px rgba(0,0,0,.4);
+  }
+  .pop .ptop { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+  .pop .val { font-size: 22px; font-weight: 600; margin: 2px 0; }
+  .pop .meta { color: var(--muted); font-size: 12.5px; }
+  .pop code { font-size: 12px; color: var(--muted); background: var(--ink); padding: 1px 4px; border-radius: 3px; word-break: break-all; }
+
+  /* Plan view: five tabs, full width */
+  .planview { grid-row: 4; min-height: 0; overflow: auto; border-top: 1px solid var(--line); }
+  .plan-tabs { position: sticky; top: 0; z-index: 2; background: var(--ink); display: flex; gap: 2px; padding: 10px 32px 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
+  .plan-tabs button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 14px 10px; color: var(--muted); cursor: pointer; white-space: nowrap; font-size: 15px; }
+  .plan-tabs button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--live); font-weight: 600; }
+  .plan-tabs button:disabled { color: var(--dim); cursor: default; }
+  .plan-tabs .count { color: var(--dim); font-size: 12.5px; margin-left: 4px; }
+  .plan-body { padding: 22px 32px 60px; max-width: 1180px; }
+  .plan-body h2 { font-size: 20px; margin: 28px 0 10px; font-weight: 600; letter-spacing: -.01em; }
+  .plan-body h2:first-child { margin-top: 0; }
+  .plan-body .sub { color: var(--muted); margin: -4px 0 14px; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; margin: 10px 0 14px; }
+  .tile { background: var(--ink-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  .tile .k { color: var(--muted); font-size: 12.5px; }
+  .tile .v { font-size: 22px; font-weight: 600; letter-spacing: -.01em; margin-top: 2px; }
+  .section { border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin-bottom: 14px; background: rgba(27,42,59,.45); }
+  .section-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+  .section-head h3 { margin: 0; font-size: 17px; font-weight: 600; }
+  .section .headline { font-size: 15.5px; margin: 6px 0 4px; }
+  ul.findings2 { list-style: none; padding: 0; margin: 8px 0 0; }
+  ul.findings2 li { padding: 5px 0; border-top: 1px solid var(--ink-3); }
+  .flows-map { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin: 12px 0 4px; }
+  .flow-cell { border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; font-size: 14px; }
+  .flow-cell .fn { font-weight: 600; display: flex; align-items: center; gap: 6px; }
+  .flow-cell .fnote { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+  .flow-cell.live { border-color: rgba(111,207,151,.5); }
+  .flow-cell.warn { border-color: rgba(245,185,74,.5); }
+  .flow-cell.missing { border-style: dashed; color: var(--muted); }
+  .mark { font-weight: 700; }
+  .flow-cell.live .mark { color: var(--ok); }
+  .flow-cell.warn .mark { color: var(--warn); }
+  .flow-cell.missing .mark { color: var(--bad); }
+  table.grid { width: 100%; border-collapse: collapse; font-size: 14px; margin: 8px 0; }
+  table.grid th, table.grid td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--ink-3); vertical-align: top; }
+  table.grid th { color: var(--muted); font-weight: 500; font-size: 13px; }
+  .table-wrap { overflow-x: auto; }
+  .opp { border: 1px solid var(--line); border-radius: 12px; margin-bottom: 14px; background: rgba(27,42,59,.45); overflow: hidden; }
+  .opp.locked, .opp.excluded { opacity: .7; border-style: dashed; }
+  .opp-head { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 14px; padding: 16px 18px; align-items: start; }
+  .rank { font-size: 28px; font-weight: 700; color: var(--live); line-height: 1; letter-spacing: -.02em; }
+  .opp.locked .rank, .opp.excluded .rank { color: var(--dim); font-size: 18px; }
+  .opp h3 { margin: 0 0 6px; font-size: 18px; font-weight: 600; letter-spacing: -.005em; }
+  .facts { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--muted); font-size: 13.5px; }
+  .facts b { color: var(--text); font-weight: 600; }
+  .impact { text-align: right; }
+  .impact .big { font-size: 26px; font-weight: 700; letter-spacing: -.02em; }
+  .impact .small { color: var(--muted); font-size: 12.5px; }
+  .goalfit { font-size: 11.5px; color: var(--ok); border: 1px solid rgba(111,207,151,.5); border-radius: 999px; padding: 1px 8px; margin-left: 6px; vertical-align: 2px; font-weight: 600; }
+  .opp-body { padding: 0 18px 16px 84px; }
+  .opp-body h4 { margin: 14px 0 6px; font-size: 13px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+  .opp-body ol { margin: 0; padding-left: 20px; }
+  .opp-body ol li { margin: 5px 0; }
+  details.maths { margin-top: 10px; border: 1px solid var(--line); border-radius: 9px; }
+  details.maths summary { cursor: pointer; padding: 8px 12px; color: var(--muted); font-size: 14px; }
+  details.maths[open] summary { border-bottom: 1px solid var(--line); }
+  .maths-body { padding: 10px 12px; font-size: 14px; }
+  .maths-body table { width: 100%; border-collapse: collapse; }
+  .maths-body td { padding: 5px 8px 5px 0; border-bottom: 1px solid var(--ink-3); vertical-align: top; }
+  .maths-body td:first-child { color: var(--muted); width: 170px; }
+  .formula { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; background: var(--ink); padding: 8px 10px; border-radius: 6px; margin-top: 8px; overflow-x: auto; white-space: nowrap; }
+  .meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-top: 12px; font-size: 14px; }
+  .meta-grid div span { display: block; color: var(--muted); font-size: 12.5px; }
+  .note { color: var(--muted); font-size: 13.5px; }
+  .roadmap { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 8px 0 26px; }
+  .road-col { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  .road-col h4 { margin: 0 0 8px; font-size: 14px; }
+  .road-col h4 span { color: var(--dim); font-weight: 400; font-size: 12.5px; }
+  .road-item { font-size: 13.5px; padding: 6px 8px; border-radius: 7px; background: var(--ink-2); margin-bottom: 6px; border-left: 3px solid var(--line); }
+  .road-item.build { border-left-color: var(--live); }
+  .road-item.enabler { border-left-color: var(--lane-plan); }
+  .road-item.readout { border-left-color: var(--ok); color: var(--muted); }
+  .test-card { border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin-bottom: 14px; background: rgba(27,42,59,.45); }
+  .test-card h3 { margin: 0 0 10px; font-size: 17px; }
+  .test-card table.grid td:first-child { color: var(--muted); width: 170px; }
+  .feas { border: 1px dashed rgba(245,185,74,.55); border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; }
+  .feas.ok { border-color: rgba(111,207,151,.55); }
+  .teach { background: var(--ink-2); border-radius: 10px; padding: 12px 14px; color: var(--muted); font-size: 14px; margin: 10px 0 20px; }
+  .filters { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0 14px; }
+  .filters button { background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 4px 11px; color: var(--muted); cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+  .filters button[aria-pressed="true"] { border-color: var(--text); color: var(--text); background: var(--ink-3); }
+  .summary-actions { margin: 16px 0 0; display: flex; gap: 10px; flex-wrap: wrap; }
+  .ghost-card { border: 1px dashed var(--line); border-radius: 12px; padding: 16px 18px; color: var(--muted); margin-bottom: 14px; }
+  @media (max-width: 900px) {
+    .flow { padding: 8px 16px 40px; }
+    .plan-tabs { padding: 8px 16px 0; }
+    .plan-body { padding: 18px 16px 48px; }
+    .opp-head { grid-template-columns: 34px minmax(0, 1fr); }
+    .impact { grid-column: 2; text-align: left; }
+    .opp-body { padding: 0 16px 16px; }
+    .roadmap { grid-template-columns: 1fr 1fr; }
+    .ask-box textarea { font-size: 18px; }
+  }
 </style>
 </head>
 <body>
 <header>
+  <div class="demo-banner" id="banner" hidden><span class="demo-tag">Demo</span><span><strong>Bramble &amp; Bean Coffee Co.</strong> is a fictional store. Every store number is demo data, and every web source is illustrative.</span></div>
   <div id="hero"></div>
   <div class="side">
     <div class="status">
       <span class="live" id="live"><span class="live-dot"></span><span id="clock">0:00</span></span>
       <span id="cost"></span>
       <select id="runs" aria-label="Run"></select>
-      <button type="button" class="link" id="new-brief">New brief</button>
+      <button type="button" class="link" id="new-brief">New question</button>
     </div>
+    <div class="mode-toggle" role="group" aria-label="Mode" id="mode-toggle" hidden>
+      <button type="button" data-mode="watch" aria-pressed="true">Watch the crew</button>
+      <button type="button" data-mode="plan">Plan</button>
+    </div>
+    <button type="button" class="skip-btn" id="skip" hidden>Skip to the plan</button>
     <div class="view-toggle" role="group" aria-label="View" id="view-toggle" hidden>
       <span class="view-label">Show</span>
       <button type="button" data-view="office" aria-pressed="true">Office</button>
@@ -405,6 +632,7 @@
     <div class="form-error" id="composer-error"></div>
   </form>
 </section>
+<section class="flow" id="flow" hidden><div class="flow-inner" id="flow-inner"></div></section>
 <section class="map">
   <canvas id="office" aria-label="The crew at work, as a pixel office"></canvas>
   <svg id="map" role="img" aria-label="Pipeline map" hidden></svg>
@@ -427,6 +655,11 @@
     <div class="evidence-box" id="evidence" title="Click to dismiss"></div>
   </section>
 </main>
+<main class="planview" id="planview" hidden>
+  <nav class="plan-tabs" id="plan-tabs" role="tablist" aria-label="Plan"></nav>
+  <div class="plan-body" id="plan-body"></div>
+</main>
+<div class="pop" id="pop" hidden></div>
 
 <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
 <script src="/config.js"></script>
@@ -441,12 +674,15 @@
     try { if (param) localStorage.setItem('research.api', param); else if (!base) base = localStorage.getItem('research.api') || ''; } catch {}
     return base.replace(/\/$/, '');
   })();
-  const goToRun = (runId) => { const q = new URLSearchParams(location.search); q.set('run', runId); location.search = q.toString(); };
+  const goToRun = (runId) => openRun(runId);
+  // v1's fixed order; V2 runs send their own stages in run.started.
   const STAGES = ['brief', 'research', 'assembly', 'followup', 'assembly-2', 'factcheck', 'report'];
-  const STAGE_LABELS = { brief: 'Brief', research: 'Research', assembly: 'Assembly', followup: 'Follow-up', 'assembly-2': 'Assembly, second pass', factcheck: 'Fact-check', report: 'Report' };
+  const STAGE_LABELS = { brief: 'Brief', research: 'Research', assembly: 'Assembly', followup: 'Follow-up', 'assembly-2': 'Assembly, second pass', factcheck: 'Fact-check', report: 'Report', intake: 'Brief', audit: 'Store audit', 'audit-assembly': 'Store profile', opportunities: 'Opportunities', prioritise: 'Prioritise', plan: 'Plan' };
+  const stagesOf = () => state.stages || STAGES;
+  const stageLabel = (s) => (state.stageLabels && state.stageLabels[s]) || STAGE_LABELS[s] || s;
   const ALL = '*';
   const FEED_CAP = 400;
-  const laneOf = (agent) => `var(--lane-${agent.stage === 'research' ? agent.id : agent.stage})`;
+  const laneOf = (agent) => `var(--lane-${agent.stage === 'research' || agent.stage === 'audit' ? agent.id : agent.stage})`;
 
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -461,6 +697,10 @@
     agents: new Map(), order: [],
     report: null, claims: [], verdicts: new Map(), counts: null,
     lastT: 0, lastAt: 0, durationMs: null, costUsd: 0,
+    // V2
+    v2: false, stages: null, stageLabels: null, runBrief: null, store: null, playback: null,
+    ledger: new Map(), webFindings: [], profile: null, opps: null, priorities: null, plan: null, tests: null,
+    dataClaims: [], reportCounts: null, planVersion: 0,
   });
   const state = { runId: null, selected: ALL, stick: true, ...freshRun() };
   const allEvents = [];       // every event of this run, in order, for replay
@@ -493,7 +733,7 @@
   function ensureAgent(id) {
     let a = state.agents.get(id);
     if (!a) {
-      a = { id, stage: 'research', label: id, task: '', dependsOn: [], status: 'queued', startedT: null, endT: null, usage: null, trace: [], searches: 0 };
+      a = { id, stage: 'research', label: id, task: '', dependsOn: [], status: 'queued', startedT: null, endT: null, usage: null, trace: [], searches: 0, pulls: 0 };
       state.agents.set(id, a); state.order.push(id);
     }
     return a;
@@ -511,7 +751,10 @@
   function apply(ev) {
     state.lastT = ev.t; state.lastAt = Date.now();
     switch (ev.type) {
-      case 'run.started': state.runId = ev.runId; state.brief = ev.brief; state.model = ev.model; state.status = 'running'; break;
+      case 'run.started':
+        state.runId = ev.runId; state.brief = ev.brief; state.model = ev.model; state.status = 'running';
+        if (ev.stages) { state.v2 = true; state.stages = ev.stages; state.stageLabels = ev.stageLabels || null; state.runBrief = ev.runBrief || null; state.store = ev.store || null; state.playback = ev.playback || null; }
+        break;
       case 'run.completed': state.status = 'completed'; state.durationMs = ev.durationMs; state.costUsd = ev.costUsd; break;
       case 'run.failed': state.status = 'failed'; state.error = ev.error; break;
       case 'agent.queued': { const a = ensureAgent(ev.agent.id); Object.assign(a, ev.agent); break; }
@@ -529,14 +772,24 @@
       case 'agent.fetch': pushTrace(ev.agentId, { kind: 'fetch', url: ev.url }, ev.t); break;
       case 'agent.completed': { const a = ensureAgent(ev.agentId); a.status = 'completed'; a.endT = ev.t; a.usage = ev.usage; if (a.stage !== 'brief' && a.stage !== 'report') pushTrace(ev.agentId, { kind: 'done', durationMs: ev.durationMs, usage: ev.usage }, ev.t); break; }
       case 'agent.failed': { const a = ensureAgent(ev.agentId); a.status = 'failed'; a.endT = ev.t; pushTrace(ev.agentId, { kind: 'failed', error: ev.error }, ev.t); break; }
-      case 'findings': pushTrace(ev.agentId, { kind: 'findings', headline: ev.headline, findings: ev.findings }, ev.t); break;
+      case 'findings': pushTrace(ev.agentId, { kind: 'findings', headline: ev.headline, findings: ev.findings }, ev.t); for (const f of ev.findings) if (f.id) state.webFindings.push({ agentId: ev.agentId, ...f }); state.planVersion++; break;
       case 'assembly.result': pushTrace('assembly', { kind: 'assembly', summary: ev.summary, contradictions: ev.contradictions, gaps: ev.gaps }, ev.t); break;
-      case 'followup.answer': pushTrace(ev.agentId, { kind: 'answer', answer: ev.answer, findings: ev.findings }, ev.t); break;
-      case 'report.draft': state.report = ev.markdown; state.claims = ev.claims; break;
-      case 'factcheck.verdicts': state.verdicts = new Map(ev.verdicts.map((v) => [v.id, v])); pushTrace('factcheck', { kind: 'verdicts', verdicts: ev.verdicts }, ev.t); break;
-      case 'report.final': state.report = ev.markdown; state.counts = { supported: ev.supported, unsupported: ev.unsupported, contradicted: ev.contradicted }; break;
+      case 'followup.answer': pushTrace(ev.agentId, { kind: 'answer', answer: ev.answer, findings: ev.findings }, ev.t); for (const f of ev.findings) if (f.id) state.webFindings.push({ agentId: ev.agentId, ...f }); break;
+      case 'report.draft': state.report = ev.markdown; state.claims = ev.claims; state.dataClaims = ev.dataClaims || []; state.planVersion++; break;
+      case 'factcheck.verdicts': state.verdicts = new Map(ev.verdicts.map((v) => [v.id, v])); pushTrace('factcheck', { kind: state.v2 ? 'verdicts2' : 'verdicts', verdicts: ev.verdicts }, ev.t); state.planVersion++; break;
+      case 'report.final': state.report = ev.markdown; state.counts = { supported: ev.supported, unsupported: ev.unsupported, contradicted: ev.contradicted }; state.reportCounts = ev.counts || null; state.planVersion++; break;
+      // V2: store tools, the ledger, and the planner's outputs
+      case 'tool.call': { const a = ensureAgent(ev.agentId); a.pulls += 1; pushTrace(ev.agentId, { kind: 'tool', source: ev.source, tool: ev.tool, args: ev.args, callId: ev.callId, ledgerIds: null }, ev.t); break; }
+      case 'tool.result': { const a = ensureAgent(ev.agentId); const open = [...a.trace].reverse().find((e) => e.kind === 'tool' && e.callId === ev.callId); if (open) open.ledgerIds = ev.ledgerIds; break; }
+      case 'ledger.entry': state.ledger.set(ev.entry.id, ev.entry); break;
+      case 'audit.findings': pushTrace(ev.agentId, { kind: 'audit', area: ev.area, headline: ev.headline, findings: ev.findings }, ev.t); break;
+      case 'audit.profile': state.profile = ev.profile; pushTrace('audit-assembly', { kind: 'profile', profile: ev.profile }, ev.t); state.planVersion++; break;
+      case 'opportunities': state.opps = ev.items; pushTrace('opportunity-assembly', { kind: 'opps', items: ev.items, followups: ev.followups }, ev.t); break;
+      case 'priorities': state.priorities = ev.items; pushTrace('prioritiser', { kind: 'priorities', items: ev.items }, ev.t); state.planVersion++; break;
+      case 'plan.draft': state.plan = { initiatives: ev.initiatives, roadmap: ev.roadmap }; pushTrace('planner', { kind: 'plan', initiatives: ev.initiatives }, ev.t); state.planVersion++; break;
+      case 'tests.draft': state.tests = { tests: ev.tests, feasibility: ev.feasibility }; pushTrace('planner', { kind: 'tests', tests: ev.tests, feasibility: ev.feasibility }, ev.t); state.planVersion++; break;
     }
-    if (office && !rebuilding && !(backlog && !replay.active)) {
+    if (office && !state.v2 && !rebuilding && !(backlog && !replay.active)) {
       office.onEvent(ev);
       if (ev.type === 'agent.queued') office.onQueued(ev.agent.id);
     }
@@ -557,6 +810,7 @@
     switch (e.kind) {
       case 'search': return e.results === null ? (detailed ? `searching “${clip(e.query, 48)}”` : 'searching') : (detailed ? `reading results for “${clip(e.query, 40)}”` : 'reading results');
       case 'fetch': return detailed ? `reading a page on ${hostOf(e.url)}` : 'reading a page';
+      case 'tool': return e.ledgerIds === null ? (detailed ? `pulling ${toolPhrase(e.tool)} from ${srcLabel(e.source)}` : `pulling ${srcLabel(e.source)}`) : 'reading the numbers';
       case 'thinking': return 'thinking';
       case 'text': return a.stage === 'research' || a.stage === 'followup' ? 'writing' : 'writing';
       default: return 'working';
@@ -565,7 +819,7 @@
 
   /* ---------- replay ---------- */
   function startReplay() {
-    resetRun(); office?.reset();
+    resetRun(); office?.reset(); planMode = 'watch';
     replay.active = true; replay.vt = 0; replay.cursor = 0; replay.playing = true; replay.last = performance.now();
     cancelAnimationFrame(replay.raf);
     replay.raf = requestAnimationFrame(tick);
@@ -628,7 +882,7 @@
     composerOpen = open;
     $('composer').hidden = !open;
     document.body.classList.toggle('composing', open);
-    $('new-brief').textContent = open && !noRunsYet ? 'Close' : 'New brief';
+    $('new-brief').textContent = open && !noRunsYet ? 'Close' : 'New question';
     if (open) $('composer-form').brief.focus();
     invalidate();
   }
@@ -646,7 +900,10 @@
     if (reportFull) setReportFull(false);
     else if (composerOpen && !noRunsYet) openComposer(false);
   });
-  $('new-brief').addEventListener('click', () => openComposer(!composerOpen));
+  $('new-brief').addEventListener('click', () => {
+    if (flow.screen || composerOpen) { if (state.runId) { flow.screen = null; openComposer(false); } return; }
+    flow.question = ''; openFlow('ask');
+  });
   $('composer-cancel').addEventListener('click', () => openComposer(false));
   $('examples').addEventListener('click', (e) => {
     const b = e.target.closest('button'); if (!b) return;
@@ -662,27 +919,39 @@
       const res = await fetch(`${API}/api/runs`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ brief: form.brief.value }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Could not start the run.');
-      goToRun(data.runId);
+      btn.disabled = false; goToRun(data.runId);
     } catch (ex) { err.textContent = ex.message; btn.disabled = false; }
   });
 
   function renderHeader() {
     const hero = $('hero');
-    if (composerOpen) hero.innerHTML = `<p class="brief placeholder">${noRunsYet ? 'Give the crew its first brief.' : 'A new brief for the crew.'}</p>`;
-    else if (state.brief) hero.innerHTML = `<p class="brief">${esc(state.brief)}</p>`;
-    else hero.innerHTML = `<p class="brief placeholder">Pick a run, or write a new brief.</p>`;
+    const showFlow = !!flow.screen;
+    const m = modeOf();
+    if (showFlow) hero.innerHTML = '';
+    else if (composerOpen) hero.innerHTML = `<p class="brief placeholder">${noRunsYet ? 'Give the crew its first brief.' : 'A new brief for the crew.'}</p>`;
+    else if (state.brief) hero.innerHTML = `<p class="brief">${esc(state.brief)}</p>${state.v2 && state.runBrief ? `<div class="note" style="margin-top:4px">${esc(state.store?.name || '')} <span class="demo-tag">Demo data</span> · ${briefBits(state.runBrief).map(esc).join(' · ')}</div>` : ''}`;
+    else hero.innerHTML = `<p class="brief placeholder">${noRunsYet ? 'Give the crew its first brief.' : 'Pick a run, or ask a new question.'}</p>`;
+    $('banner').hidden = !(state.v2 || showFlow);
+    $('flow').hidden = !showFlow;
+    document.querySelector('.panels').hidden = showFlow || (state.v2 && m === 'plan');
+    $('planview').hidden = showFlow || !(state.v2 && m === 'plan');
+    $('mode-toggle').hidden = showFlow || !state.v2;
+    $('mode-toggle').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === m)));
+    $('skip').hidden = showFlow || !(state.v2 && isLive && state.status === 'running' && !replay.active);
+    $('new-brief').textContent = showFlow || composerOpen ? (state.runId ? 'Back to the run' : 'New question') : 'New question';
     $('composer-cancel').hidden = noRunsYet;
     const live = $('live');
     live.className = `live ${state.status}`;
     live.hidden = state.status === 'idle';
     const hasRun = !!state.runId || replay.active;
     // Writing a brief takes the room's place; the trace and report stay for reference.
-    document.querySelector('.map').hidden = !hasRun || composerOpen;
-    const officeOn = hasRun && view === 'office' && !!office;
+    document.querySelector('.map').hidden = !hasRun || composerOpen || showFlow || (state.v2 && m === 'plan');
+    // The pixel office only knows v1's desks; V2 runs show the pipeline map.
+    const officeOn = hasRun && view === 'office' && !!office && !state.v2;
     $('office').hidden = !officeOn;
     // SVG elements have no `hidden` property; the attribute is what the CSS keys on.
     $('map').toggleAttribute('hidden', officeOn);
-    $('view-toggle').hidden = !hasRun || !office;
+    $('view-toggle').hidden = !hasRun || !office || state.v2;
     $('view-toggle').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === view)));
     office?.setVisible(officeOn);
     let elapsed = 0;
@@ -692,6 +961,7 @@
     else elapsed = state.lastT;
     $('clock').textContent = state.status === 'idle' ? '' : mmss(elapsed);
     $('clock').title = state.model ? `Model: ${state.model}` : '';
+    if (state.v2 && state.playback > 1 && state.status === 'running' && !replay.active) $('clock').textContent += ` · ${state.playback}× demo playback`;
     const spent = state.status === 'completed' ? state.costUsd : [...state.agents.values()].reduce((s, a) => s + (a.usage?.costUsd || 0), 0);
     $('cost').textContent = spent > 0 ? money(spent) : '';
 
@@ -707,13 +977,20 @@
   }
 
   /* ---------- map ---------- */
-  const NODE_R = 14, COL_W = 208, ROW_H = 84, TOP = 50;
+  const NODE_R = 14, COL_W1 = 208, ROW_H1 = 84, TOP = 50;
   function renderMap() {
     const svg = $('map');
+    const STAGES = stagesOf();
+    const COL_W = state.v2 ? 150 : COL_W1, ROW_H = state.v2 ? 78 : ROW_H1;
+    svg.classList.toggle('v2', !!state.v2);
     const byStage = new Map(STAGES.map((s) => [s, []]));
     for (const id of state.order) { const a = state.agents.get(id); if (byStage.has(a.stage)) byStage.get(a.stage).push(a); }
-    const assembly = state.agents.get('assembly');
-    const ghostFollowup = byStage.get('followup').length === 0;
+    // The ghost "Follow-ups" node sits between whichever stages surround the follow-up column.
+    const fIdx = STAGES.indexOf('followup');
+    const ghostFollowup = fIdx >= 0 && byStage.get('followup').length === 0;
+    const ghostFrom = fIdx > 0 ? byStage.get(STAGES[fIdx - 1]) : [];
+    const ghostTo = fIdx >= 0 && fIdx < STAGES.length - 1 ? byStage.get(STAGES[fIdx + 1]) : [];
+    const assembly = ghostFrom[0];
     const rows = Math.max(3, ...[...byStage.values()].map((l) => l.length));
     const width = STAGES.length * COL_W, height = TOP + rows * ROW_H + 52;
     const pos = new Map();
@@ -727,7 +1004,7 @@
     });
 
     let edges = '', nodes = '', heads = '';
-    STAGES.forEach((stage, ci) => { heads += `<text class="stage" x="${ci * COL_W + COL_W / 2}" y="20" text-anchor="middle">${esc(STAGE_LABELS[stage])}</text>`; });
+    STAGES.forEach((stage, ci) => { heads += `<text class="stage" x="${ci * COL_W + COL_W / 2}" y="20" text-anchor="middle">${esc(stageLabel(stage))}</text>`; });
 
     const edge = (from, to, lane, cls) => {
       const a = pos.get(from), b = pos.get(to); if (!a || !b) return '';
@@ -740,13 +1017,13 @@
       for (const dep of a.dependsOn) edges += edge(dep, a.id, laneOf(a), cls);
     }
     if (ghostFollowup && assembly) {
-      edges += edge('assembly', '__ghost', 'var(--lane-followup)', assembly.status === 'completed' ? 'done' : '');
-      const a2 = state.agents.get('assembly-2');
-      if (a2) edges += edge('__ghost', 'assembly-2', 'var(--lane-assembly)', a2.status === 'running' ? 'flow' : a2.status === 'completed' ? 'done' : '');
+      for (const from of ghostFrom) edges += edge(from.id, '__ghost', 'var(--lane-followup)', from.status === 'completed' ? 'done' : '');
+      for (const to of ghostTo) edges += edge('__ghost', to.id, laneOf(to), to.status === 'running' ? 'flow' : to.status === 'completed' ? 'done' : '');
     }
 
     const subOf = (a) => {
-      if (a.stage === 'brief') return '';
+      if (a.stage === 'brief' || a.stage === 'intake') return '';
+      if (a.status === 'running' && a.pulls) return `${actionOf(a)} (${a.pulls} pull${a.pulls === 1 ? '' : 's'})`;
       if (a.stage === 'report') return a.status === 'completed' ? 'ready' : 'waiting';
       if (a.status === 'running') { const act = actionOf(a); return a.searches ? `${act} (${a.searches} search${a.searches === 1 ? '' : 'es'})` : act; }
       if (a.status === 'completed') return a.endT != null && a.startedT != null ? mmss(a.endT - a.startedT) : '';
@@ -768,7 +1045,7 @@
     }
     if (ghostFollowup) {
       const p = pos.get('__ghost');
-      const sub = !assembly || assembly.status !== 'completed' ? 'decided by assembly' : 'no gaps found';
+      const sub = !assembly || assembly.status !== 'completed' ? `decided by ${state.v2 ? 'opportunities' : 'assembly'}` : 'no gaps found';
       nodes += `<g class="node ghost" aria-hidden="true">
         <circle class="core" cx="${p.x}" cy="${p.y}" r="${NODE_R}"/>
         <text class="label" x="${p.x}" y="${p.y + 33}" text-anchor="middle">Follow-ups</text>
@@ -776,6 +1053,7 @@
       </g>`;
     }
     svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    svg.style.minWidth = state.v2 ? '1240px' : '';
     svg.innerHTML = heads + edges + nodes;
   }
   $('map').addEventListener('click', (e) => { const g = e.target.closest('.node[data-id]'); if (g) select(g.dataset.id); });
@@ -795,7 +1073,7 @@
       $('trace-title').textContent = 'All agents';
       $('trace-task').textContent = state.runId ? 'Everything the crew is doing, in the order it happened.' : '';
       entries = [];
-      for (const id of state.order) { const a = state.agents.get(id); if (a.stage !== 'brief' && a.stage !== 'report') entries.push(...a.trace); }
+      for (const id of state.order) { const a = state.agents.get(id); if (a.stage !== 'brief' && a.stage !== 'intake' && a.stage !== 'report') entries.push(...a.trace); }
       entries.sort((x, y) => x.t - y.t || x.seq - y.seq);
       if (!state.runId) { body.innerHTML = '<p class="empty">Start a brief above, or pick a past run.</p>'; return; }
       if (entries.length === 0) { body.innerHTML = '<p class="empty">The crew is starting.</p>'; return; }
@@ -805,7 +1083,8 @@
       $('trace-title').innerHTML = `<span class="swatch" style="background:${laneOf(a)}"></span>${titleOf(a)}`;
       $('trace-task').textContent = a.task;
       if (a.stage === 'brief') { body.innerHTML = `<p class="empty">${esc(state.brief)}</p>`; return; }
-      if (a.stage === 'report') { body.innerHTML = `<p class="empty">${a.status === 'completed' ? 'The report is on the right. Click a numbered claim to see what the fact-checker found.' : 'The report appears on the right when the fact-check is done.'}</p>`; return; }
+      if (a.stage === 'intake') { const rb = state.runBrief; body.innerHTML = rb ? `<ul class="plain"><li><strong>Question:</strong> ${esc(rb.question)}</li>${briefBits(rb).map((b) => `<li>${esc(b)}</li>`).join('')}${rb.constraints?.length ? `<li>Constraints: ${esc(rb.constraints.join(', '))}</li>` : ''}${Object.entries(rb.freeText || {}).map(([k, v]) => `<li>${esc(k)} (own words): ${esc(v)}</li>`).join('')}<li>Sources off: ${esc(SRC_ORDER.filter((s) => rb.sources && rb.sources[s] === false).map(srcLabel).join(', ') || 'none')}</li></ul>` : ''; return; }
+      if (a.stage === 'report') { body.innerHTML = `<p class="empty">${state.v2 ? (a.status === 'completed' ? 'The plan is ready. Switch to Plan at the top.' : 'The plan appears when the fact-check is done.') : a.status === 'completed' ? 'The report is on the right. Click a numbered claim to see what the fact-checker found.' : 'The report appears on the right when the fact-check is done.'}</p>`; return; }
       if (a.trace.length === 0) {
         body.innerHTML = `<p class="empty">${a.status === 'queued' ? `Waiting on ${a.dependsOn.map((d) => state.agents.get(d)?.label || d).join(', ') || 'the run'}.` : a.status === 'running' ? 'Starting.' : 'Nothing to show.'}</p>`;
         return;
@@ -815,7 +1094,7 @@
     const shown = entries.length > FEED_CAP ? entries.slice(-FEED_CAP) : entries;
     const items = shown.map((e) => {
       const a = state.agents.get(e.agentId);
-      const who = all && a ? `<div class="who" style="--lane:${laneOf(a)}">${esc(a.label)}</div>` : '';
+      const who = all && a ? `<div class="who" style="--lane:${laneOf(a)}">${esc(a.label)}${a.model && state.v2 ? ` <span style="color:var(--dim);font-weight:400">${esc(a.model)}</span>` : ''}</div>` : '';
       return `<li><time>${mmss(e.t)}</time><div class="entry ${e.kind}">${who}<div class="body">${entryHtml(e)}</div></div></li>`;
     }).join('');
     const hidden = entries.length - shown.length;
@@ -823,12 +1102,12 @@
     if (state.stick && nearBottom && (state.status === 'running')) panel.scrollTop = panel.scrollHeight;
   }
   function titleOf(a) {
-    const stage = STAGE_LABELS[a.stage];
+    const stage = stageLabel(a.stage);
     if (a.stage === 'followup' || stage === a.label) return esc(a.label);
     if (stage.startsWith(a.label)) return esc(stage);
     return `${esc(a.label)} <span style="color:var(--dim);font-weight:400">${esc(stage)}</span>`;
   }
-  const findingsHtml = (list) => list.length ? `<ul class="findings">${list.map((f) => `<li><span class="conf ${esc(f.confidence)}" title="${esc(f.confidence)} confidence"></span><div>${esc(f.claim)}<div class="evidence">${esc(f.evidence)}${f.sources?.length ? ' ' + f.sources.map((s) => `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title || s.url)}</a>`).join(', ') : ''}</div></div></li>`).join('')}</ul>` : '';
+  const findingsHtml = (list) => list.length ? `<ul class="findings">${list.map((f) => `<li><span class="conf ${esc(f.confidence)}" title="${esc(f.confidence)} confidence"></span><div>${f.id ? pt(`[${f.id}] `) : ''}${esc(f.claim)}<div class="evidence">${esc(f.evidence)}${f.sources?.length ? ' ' + f.sources.map((s) => `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title || s.url)}</a>`).join(', ') : ''}</div></div></li>`).join('')}</ul>` : '';
   function entryHtml(e) {
     switch (e.kind) {
       case 'thinking': return esc(e.text);
@@ -841,7 +1120,7 @@
       }
       case 'fetch': return `Read a page on <a href="${esc(e.url)}" target="_blank" rel="noopener" title="${esc(e.url)}">${esc(hostOf(e.url))}</a>`;
       case 'findings': return `<div class="headline">${esc(e.headline)}</div>${findingsHtml(e.findings)}`;
-      case 'answer': return `<div class="headline">${esc(e.answer)}</div>${findingsHtml(e.findings)}`;
+      case 'answer': return `<div class="headline">${pt(e.answer)}</div>${findingsHtml(e.findings)}`;
       case 'assembly': {
         const contra = e.contradictions.length ? `<div class="contra"><div class="headline">${e.contradictions.length} contradiction${e.contradictions.length === 1 ? '' : 's'}</div>${e.contradictions.map((c) => `<p><strong>${esc(c.topic)}.</strong> ${esc(c.first.agent)} says “${esc(c.first.claim)}”; ${esc(c.second.agent)} says “${esc(c.second.claim)}”.</p>`).join('')}</div>` : '<div class="contra"><div class="headline">No contradictions</div></div>';
         const gaps = e.gaps.length ? `<div class="gaps"><div class="headline">${e.gaps.length} gap${e.gaps.length === 1 ? '' : 's'} to follow up</div><ol>${e.gaps.map((g) => `<li>${esc(g.question)}<div class="why">${esc(g.why)}</div></li>`).join('')}</ol></div>` : '<div class="gaps"><div class="headline">No gaps worth a follow-up</div></div>';
@@ -850,12 +1129,13 @@
       case 'verdicts': return `<ul class="verdict-list">${e.verdicts.map((v) => `<li><span class="pill ${esc(v.verdict)}">${esc(v.id)} ${esc(v.verdict)}</span><div>${esc(v.evidence)}${v.source_url ? ` <a href="${esc(v.source_url)}" target="_blank" rel="noopener" style="color:var(--muted)">source</a>` : ''}</div></li>`).join('')}</ul>`;
       case 'done': return e.usage.turns ? `Finished in ${mmss(e.durationMs)}, ${e.usage.turns} turn${e.usage.turns === 1 ? '' : 's'}, ${money(e.usage.costUsd)}` : `Finished in ${mmss(e.durationMs)}`;
       case 'failed': return `Failed: ${esc(e.error)}`;
-      default: return '';
+      default: return v2EntryHtml(e);
     }
   }
 
   /* ---------- report ---------- */
   function renderReport() {
+    if (state.v2) { $('report-expand').hidden = true; return renderV2Report(); }
     const status = $('report-status');
     $('report-expand').hidden = !state.report;
     if (!state.report) {
@@ -897,7 +1177,467 @@
   $('report').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { const el = e.target.closest('.claim'); if (el) { e.preventDefault(); showEvidence(el.dataset.claim); } } });
   $('evidence').addEventListener('click', () => { $('evidence').innerHTML = ''; $('report').querySelectorAll('.claim.active').forEach((el) => el.classList.remove('active')); });
 
-  function render() { renderHeader(); renderMap(); renderTrace(); renderReport(); }
+  /* ================= V2: growth planner ================= */
+  const SRC = { shopify: ['Shopify', 'Sh'], klaviyo: ['Klaviyo', 'Kl'], sms: ['Postscript', 'Ps'], meta: ['Meta Ads', 'Me'], tiktok: ['TikTok Ads', 'Tt'], tiktokshop: ['TikTok Shop', 'TS'], skio: ['Skio', 'Sk'] };
+  const SRC_ORDER = ['shopify', 'klaviyo', 'sms', 'meta', 'tiktok', 'tiktokshop', 'skio'];
+  const srcLabel = (s) => (SRC[s] ? SRC[s][0] : s);
+  const mono = (s, sm = true) => `<span class="mono ${sm ? 'sm' : ''}" style="background:var(--src-${esc(s)})" title="${esc(srcLabel(s))}">${esc(SRC[s] ? SRC[s][1] : '?')}</span>`;
+  const toolPhrase = (tool) => String(tool).split('.')[1].replace(/^(get|list)_/, '').replace(/_/g, ' ').replace(/\bltv\b/, 'LTV').replace(/\bsms\b/, 'SMS');
+  const usdShort = (n) => { const a = Math.abs(n); if (a >= 1e6) return `$${(n / 1e6).toFixed(a >= 1e7 ? 0 : 1)}M`; if (a >= 1e4) return `$${Math.round(n / 1000)}k`; if (a >= 1e3) return `$${(n / 1000).toFixed(1)}k`; return `$${Math.round(n).toLocaleString('en-US')}`; };
+  const pctS = (r, d = 1) => `${(r * 100).toFixed(d).replace(/\.0$/, '')}%`;
+  const num = (n) => Math.round(n).toLocaleString('en-US');
+  function fmtValue(v, unit) {
+    switch (unit) {
+      case 'usd': return v >= 10000 ? usdShort(v) : `$${v.toLocaleString('en-US')}`;
+      case 'usd_per_month': return `${usdShort(v)}/mo`;
+      case 'ratio': return v < 0 ? `−${pctS(-v, v > -0.1 ? 1 : 0)}` : pctS(v, v < 0.1 && v > 0 ? 1 : 0);
+      case 'count_per_month': return `${num(v)}/mo`;
+      case 'days': return `${v} days`;
+      case 'orders': return `${v} orders`;
+      case 'bool': return v ? 'On' : 'Off';
+      default: return num(v);
+    }
+  }
+  const CONF = { H: ['High', 1], M: ['Medium', 0.7], L: ['Low', 0.4] };
+  const EFFORT = { S: ['Small', 1], M: ['Medium', 2], L: ['Large', 4] };
+
+  /** [dN] and [cN] markers → clickable pills. `verdicts` colours them by fact-check result (Summary only). */
+  function pillify(html, verdicts = false) {
+    return String(html)
+      .replace(/\[(d\d+)\]/g, (_, id) => { const v = verdicts ? state.verdicts.get(id) : null; return `<span class="dref ${v ? esc(v.verdict) : ''}" data-d="${id}" role="button" tabindex="0" title="Store data ${id}${v ? ` · ${v.verdict}` : ''}">${id}</span>`; })
+      .replace(/\[(c\d+)\]/g, (_, id) => { const v = state.verdicts.get(id); return `<span class="claim ${v ? esc(v.verdict) : ''}" data-c="${id}" role="button" tabindex="0" title="Web claim ${id}${v ? ` · ${v.verdict}` : ''}">${id}</span>`; });
+  }
+  const pt = (text, verdicts = false) => pillify(esc(text), verdicts);
+
+  /** A small Markdown renderer for when marked (CDN) isn't available, e.g. the offline file. */
+  function miniMarkdown(md) {
+    const inline = (s) => esc(s).replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>').replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    const out = []; let list = null;
+    const close = () => { if (list) { out.push(`</${list}>`); list = null; } };
+    for (const line of md.split('\n')) {
+      let m;
+      if ((m = line.match(/^(#{1,3})\s+(.*)/))) { close(); out.push(`<h${m[1].length}>${inline(m[2])}</h${m[1].length}>`); }
+      else if ((m = line.match(/^\s*[-*]\s+(.*)/))) { if (list !== 'ul') { close(); out.push('<ul>'); list = 'ul'; } out.push(`<li>${inline(m[1])}</li>`); }
+      else if ((m = line.match(/^\s*\d+\.\s+(.*)/))) { if (list !== 'ol') { close(); out.push('<ol>'); list = 'ol'; } out.push(`<li>${inline(m[1])}</li>`); }
+      else if (!line.trim()) close();
+      else { close(); out.push(`<p>${inline(line)}</p>`); }
+    }
+    close();
+    return out.join('\n');
+  }
+  const markdown = (md) => { try { return window.marked ? marked.parse(md) : miniMarkdown(md); } catch { return miniMarkdown(md); } };
+
+  /* ---------- transport: the local server, or the bundled engine in the single-file demo ---------- */
+  const ENGINE = window.DemoEngine || null;
+  const LOCAL = !!(window.DEMO_STANDALONE && ENGINE);
+  const localRuns = new Map();
+  let demoInfo = null;
+  let activeStream = null;
+  let password = '';
+  try { password = sessionStorage.getItem('demo.password') || ''; } catch {}
+  async function post(path, body) {
+    const res = await fetch(`${API}${path}`, { method: 'POST', headers: { 'content-type': 'application/json', ...(password ? { 'x-demo-password': password } : {}) }, body: JSON.stringify(body) });
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 401 && data.needsPassword) {
+      const p = window.prompt('This demo needs a password.');
+      if (p) { password = p; try { sessionStorage.setItem('demo.password', p); } catch {} return post(path, body); }
+    }
+    if (!res.ok) throw new Error(data.error || 'Request failed.');
+    return data;
+  }
+  const transport = {
+    async store() {
+      if (LOCAL) return { store: ENGINE.store, sources: ENGINE.sources, examples: ENGINE.examples, liveAgents: false };
+      return (await fetch(`${API}/api/store`)).json();
+    },
+    async intake(question) { return LOCAL ? ENGINE.intake(question) : post('/api/intake', { question }); },
+    async start(runBrief, speed) {
+      if (LOCAL) {
+        const runId = `local-${Date.now().toString(36)}`;
+        const events = ENGINE.buildRun(runId, ENGINE.normalise(runBrief), { playback: speed, startedAt: new Date().toISOString() }).map((e) => ({ ...e, t: Math.round(e.t / speed) }));
+        localRuns.set(runId, { runId, brief: runBrief.question, events, t0: performance.now(), skipped: false, startedAt: new Date().toISOString(), onSkip: null });
+        return runId;
+      }
+      return (await post('/api/runs', { runBrief, speed })).runId;
+    },
+    async skip(runId) {
+      if (LOCAL) { const r = localRuns.get(runId); if (r) { r.skipped = true; r.onSkip?.(); } return; }
+      await post(`/api/runs/${encodeURIComponent(runId)}/skip`, {});
+    },
+    async runs() {
+      if (LOCAL) return [...localRuns.values()].reverse().map((r) => ({ runId: r.runId, brief: r.brief, startedAt: r.startedAt, status: 'completed', costUsd: null }));
+      return (await fetch(`${API}/api/runs`)).json();
+    },
+  };
+  function connectLocal(runId) {
+    const r = localRuns.get(runId); if (!r) return false;
+    isLive = true;
+    const elapsed = performance.now() - r.t0;
+    let i = 0; const timers = [];
+    const deliver = (upto) => { while (i <= upto && i < r.events.length) receive(r.events[i++]); if (i >= r.events.length) { isLive = false; invalidate(); } };
+    let last = -1;
+    r.events.forEach((e, k) => { if (r.skipped || e.t <= elapsed) last = k; else timers.push(setTimeout(() => deliver(k), e.t - elapsed)); });
+    deliver(last);
+    r.onSkip = () => { timers.forEach(clearTimeout); deliver(r.events.length - 1); };
+    activeStream = { close: () => { timers.forEach(clearTimeout); r.onSkip = null; } };
+    return true;
+  }
+  /** Switches the page to a run without a reload (the offline file has nowhere to reload from). */
+  function openRun(runId, replaceUrl = false) {
+    activeStream?.close(); activeStream = null;
+    replay.playing = false; replay.active = false; cancelAnimationFrame(replay.raf);
+    allEvents.length = 0; resetRun(); state.runId = null; office?.reset();
+    backlog = true; lastArrival = 0; isLive = false; planMode = null; planTab = 'summary';
+    q0: { const q = new URLSearchParams(location.search); q.delete('mode'); q.delete('tab'); try { history.replaceState(null, '', `?${q.toString()}`); } catch {} }
+    flow.screen = null; composerOpen = false; $('composer').hidden = true; document.body.classList.remove('composing');
+    const q = new URLSearchParams(location.search); q.set('run', runId);
+    try { history[replaceUrl ? 'replaceState' : 'pushState'](null, '', `?${q.toString()}`); } catch {}
+    connect(runId);
+    loadRuns(runId);
+    invalidate();
+  }
+
+  /* ---------- Ask → Clarify → Connect ---------- */
+  const flow = { screen: null, question: '', intake: null, answers: {}, other: {}, sources: {}, speed: 5, busy: false, error: '', dirty: true };
+  function openFlow(screen) {
+    flow.screen = screen; flow.dirty = true; flow.error = '';
+    if (screen === 'ask' && !Object.keys(flow.sources).length) SRC_ORDER.forEach((s) => (flow.sources[s] = true));
+    composerOpen = false; $('composer').hidden = true; document.body.classList.remove('composing');
+    invalidate();
+  }
+  const stepsHtml = (on) => `<div class="steps">${['Ask', 'Clarify', 'Connect', 'Watch', 'Plan'].map((s, i) => `<span class="${i === on ? 'on' : i < on ? 'done' : ''}">${i + 1}. ${s}</span>`).join('')}</div>`;
+  const storeChip = () => { const st = demoInfo?.store; return st ? `<div class="store-chip"><span class="logo">B&amp;B</span><span><strong>${esc(st.name)}</strong> <span style="color:var(--muted)">· ${esc(st.domain)}</span></span><span class="demo-tag">Demo store</span></div>` : ''; };
+  function renderFlow() {
+    if (!flow.screen || !flow.dirty) return;
+    flow.dirty = false;
+    const box = $('flow-inner');
+    if (flow.lastScreen !== flow.screen) { $('flow').scrollTop = 0; flow.lastScreen = flow.screen; }
+    const err = flow.error ? `<div class="form-error">${esc(flow.error)}</div>` : '';
+    if (flow.screen === 'ask') {
+      const examples = demoInfo?.examples || [];
+      box.innerHTML = `${stepsHtml(0)}${storeChip()}
+        <h1>What do you want to grow or fix?</h1>
+        <p class="lede">Ask in your own words. The crew audits your store across Shopify, Klaviyo, SMS, paid social, TikTok Shop and Skio, researches the market around what it finds, and comes back with a ranked plan you can test.</p>
+        <form class="ask-box" id="ask-form">
+          <textarea name="q" rows="2" placeholder="e.g. How do I get more of my customers onto subscription?">${esc(flow.question)}</textarea>
+          <div class="row"><div class="chips">${examples.map((x, i) => `<button type="button" class="chip" data-example="${i}">${esc(x)}</button>`).join('')}</div>
+          <button type="submit" class="primary-btn" ${flow.busy ? 'disabled' : ''}>${flow.busy ? 'Reading your store…' : 'Continue'}</button></div>
+        </form>${err}
+        ${demoInfo?.liveAgents ? `<p class="note" style="margin-top:18px">Or <button type="button" class="link-btn" data-v1>write a v1 market-research brief</button> (live agents, about $20 and 15 minutes).</p>` : ''}`;
+      setTimeout(() => box.querySelector('textarea')?.focus(), 0);
+      return;
+    }
+    if (flow.screen === 'clarify') {
+      const qs = flow.intake?.questions || [];
+      box.innerHTML = `${stepsHtml(1)}
+        <h1>A few quick questions</h1>
+        <p class="lede">“${esc(flow.question)}”<br>Suggestions come from your store's data. Everything is optional.</p>
+        ${qs.map((q) => `<div class="qcard"><h3>${esc(q.text)}</h3><div class="hint">${q.select === 'single' ? 'Pick one' : 'Pick any'}${q.allowOther ? ', or add your own' : ''}</div>
+          <div class="opts">${q.options.map((o) => `<button type="button" class="opt" data-q="${esc(q.id)}" data-o="${esc(o.id)}" aria-pressed="${(flow.answers[q.id] || []).includes(o.id)}"><span class="lbl">${esc(o.label)}</span>${o.why ? `<span class="why">${o.whySource ? mono(o.whySource) : ''}${esc(o.why)}</span>` : ''}</button>`).join('')}
+          ${q.allowOther ? `<input class="other-input" data-other="${esc(q.id)}" placeholder="+ Add your own" value="${esc(flow.other[q.id] || '')}">` : ''}</div></div>`).join('')}
+        <div class="flow-actions"><button type="button" class="link-btn" data-back="ask">Back</button>
+          <div class="row"><button type="button" class="link-btn" data-skip-run>Skip, just run it</button><button type="button" class="primary-btn" data-next="connect">Continue</button></div></div>${err}`;
+      return;
+    }
+    if (flow.screen === 'connect') {
+      const sources = demoInfo?.sources || {};
+      box.innerHTML = `${stepsHtml(2)}
+        <h1>Your connected sources</h1>
+        <p class="lede">In demo mode every source is pre-connected to the fictional store: no logins, no keys. Switch one off and the run treats that data as missing, so the plan adapts.</p>
+        <div class="src-grid">${SRC_ORDER.filter((s) => sources[s]).map((s) => { const info = sources[s]; const on = !!flow.sources[s]; return `<div class="src-card ${on ? '' : 'off'}">
+          <div class="top">${mono(s, false)}<div class="name">${esc(info.label)}<span class="kind">${esc(info.kind)}</span></div>
+          <button type="button" class="switch" role="switch" aria-checked="${on}" aria-label="${esc(info.label)}" data-src="${s}" ${info.required ? 'disabled title="Required"' : ''}></button></div>
+          <div class="provides">${esc(info.provides)}</div>
+          <div class="state">${on ? `● Connected · Demo data · synced ${info.syncedMinutesAgo} min ago` : '○ Off for this run'}${info.required ? ' · Required' : ''}</div></div>`; }).join('')}</div>
+        <div class="flow-actions"><button type="button" class="link-btn" data-back="clarify">Back</button>
+          <div class="row"><label class="speed-pick">Playback <select id="speed">${[[1, '1× (about 9 min, as recorded)'], [5, '5× (about 2 min)'], [10, '10× (about 1 min)'], [20, '20× (about 30 s)']].map(([v, l]) => `<option value="${v}" ${flow.speed === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+          <button type="button" class="primary-btn" data-start ${flow.busy ? 'disabled' : ''}>${flow.busy ? 'Starting…' : 'Start the crew'}</button></div></div>${err}
+        <p class="note" style="margin-top:14px">Scripted run on demo data: no agents are called and nothing is spent.</p>`;
+    }
+  }
+  async function submitQuestion(question) {
+    flow.question = question.trim();
+    if (!flow.question) { flow.error = 'Ask a question first.'; flow.dirty = true; invalidate(); return; }
+    flow.busy = true; flow.error = ''; flow.dirty = true; invalidate();
+    try {
+      flow.intake = await transport.intake(flow.question);
+      flow.answers = {}; flow.other = {};
+      for (const q of flow.intake.questions) flow.answers[q.id] = q.options.filter((o) => o.suggested).map((o) => o.id);
+      flow.busy = false; openFlow('clarify');
+    } catch (ex) { flow.busy = false; flow.error = ex.message; flow.dirty = true; invalidate(); }
+  }
+  function runBriefFromFlow(useDefaults) {
+    const pick = (id) => (flow.answers[id] || []);
+    const freeText = {};
+    if (!useDefaults) for (const [k, v] of Object.entries(flow.other)) if (v && v.trim()) freeText[k] = v.trim();
+    const sources = useDefaults ? Object.fromEntries(SRC_ORDER.map((s) => [s, true])) : { ...flow.sources };
+    return { question: flow.question, goal: pick('goal')[0] || null, timeframe: pick('timeframe')[0] || null, competitors: pick('competitors'), capacity: pick('capacity')[0] || null, constraints: pick('constraints'), freeText, sources };
+  }
+  async function startFromFlow(useDefaults) {
+    flow.busy = true; flow.dirty = true; flow.error = ''; invalidate();
+    try {
+      const sel = $('speed'); if (sel) flow.speed = Number(sel.value);
+      const runId = await transport.start(runBriefFromFlow(useDefaults), flow.speed);
+      flow.busy = false;
+      openRun(runId);
+    } catch (ex) { flow.busy = false; flow.error = ex.message; flow.dirty = true; invalidate(); }
+  }
+  $('flow-inner').addEventListener('submit', (e) => { if (e.target.id === 'ask-form') { e.preventDefault(); submitQuestion(e.target.q.value); } });
+  $('flow-inner').addEventListener('keydown', (e) => { if (e.target.matches('#ask-form textarea') && e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); e.target.form.requestSubmit(); } });
+  $('flow-inner').addEventListener('input', (e) => { const k = e.target.dataset?.other; if (k) flow.other[k] = e.target.value; if (e.target.name === 'q') flow.question = e.target.value; });
+  $('flow-inner').addEventListener('change', (e) => { if (e.target.id === 'speed') flow.speed = Number(e.target.value); });
+  $('flow-inner').addEventListener('click', (e) => {
+    const t = e.target.closest('button'); if (!t) return;
+    if (t.dataset.example != null) { const ta = $('flow-inner').querySelector('textarea'); ta.value = demoInfo.examples[Number(t.dataset.example)]; flow.question = ta.value; ta.focus(); return; }
+    if (t.dataset.v1 != null) { flow.screen = null; openComposer(true); return; }
+    if (t.dataset.back) { openFlow(t.dataset.back); return; }
+    if (t.dataset.next) { openFlow(t.dataset.next); return; }
+    if (t.dataset.skipRun != null) { startFromFlow(true); return; }
+    if (t.dataset.start != null) { startFromFlow(false); return; }
+    if (t.dataset.src) { flow.sources[t.dataset.src] = !flow.sources[t.dataset.src]; flow.dirty = true; invalidate(); return; }
+    if (t.dataset.q) {
+      const q = flow.intake.questions.find((x) => x.id === t.dataset.q); const cur = flow.answers[q.id] || [];
+      const o = t.dataset.o;
+      flow.answers[q.id] = q.select === 'single' ? (cur.includes(o) ? [] : [o]) : cur.includes(o) ? cur.filter((x) => x !== o) : [...cur, o];
+      // Update in place so a half-typed "add your own" keeps focus.
+      $('flow-inner').querySelectorAll(`.opt[data-q="${q.id}"]`).forEach((b) => b.setAttribute('aria-pressed', String(flow.answers[q.id].includes(b.dataset.o))));
+    }
+  });
+
+  /* ---------- plan view ---------- */
+  let planMode = null;   // null = automatic: the plan once the run finishes
+  let planTab = 'summary';
+  let renderedPlanKey = '';
+  const srcFilter = { kind: 'all', source: null, verdict: null };
+  const modeOf = () => (!state.v2 ? 'watch' : replay.active && replay.playing ? 'watch' : planMode || (state.counts ? 'plan' : 'watch'));
+  $('mode-toggle').addEventListener('click', (e) => { const b = e.target.closest('button[data-mode]'); if (b) { planMode = b.dataset.mode; if (planMode === 'plan' && replay.playing) { replay.playing = false; } invalidate(); } });
+  $('skip').addEventListener('click', async () => { $('skip').disabled = true; try { await transport.skip(state.runId); } catch {} $('skip').disabled = false; });
+
+  const TABS = [
+    ['summary', 'Summary', () => !!state.report],
+    ['context', 'Store context', () => !!state.profile],
+    ['ranked', 'Ranked plan', () => !!state.priorities],
+    ['tests', 'Test plan', () => !!state.tests],
+    ['sources', 'Sources', () => state.ledger.size > 0],
+  ];
+  $('plan-tabs').addEventListener('click', (e) => { const b = e.target.closest('button[data-tab]'); if (b && !b.disabled) { planTab = b.dataset.tab; invalidate(); } });
+  $('plan-body').addEventListener('click', (e) => {
+    const go = e.target.closest('[data-goto]'); if (go) { planTab = go.dataset.goto; invalidate(); $('planview').scrollTop = 0; return; }
+    const f = e.target.closest('[data-filter]'); if (f) { const [k, v] = f.dataset.filter.split(':'); srcFilter[k] = srcFilter[k] === v || v === '' ? (k === 'kind' ? 'all' : null) : v; if (k === 'kind' && v === 'all') srcFilter.kind = 'all'; invalidate(); }
+  });
+
+  function renderPlan() {
+    if (modeOf() !== 'plan' || flow.screen) return;
+    const key = `${planTab}:${state.planVersion}:${state.verdicts.size}:${JSON.stringify(srcFilter)}`;
+    if (key === renderedPlanKey) return;
+    renderedPlanKey = key;
+    if (!TABS.find(([id]) => id === planTab)[2]()) planTab = (TABS.find(([, , ok]) => ok()) || TABS[0])[0];
+    const counts = { context: state.profile ? state.profile.sections.length : 0, ranked: state.priorities ? state.priorities.filter((o) => o.rank).length : 0, tests: state.tests ? state.tests.tests.length : 0, sources: state.ledger.size + state.webFindings.length };
+    $('plan-tabs').innerHTML = TABS.map(([id, label, ok]) => `<button type="button" role="tab" data-tab="${id}" aria-selected="${planTab === id}" ${ok() ? '' : 'disabled'}>${label}${counts[id] ? `<span class="count">${counts[id]}</span>` : ''}</button>`).join('');
+    const body = { summary: planSummary, context: planContext, ranked: planRanked, tests: planTests, sources: planSources }[planTab]();
+    $('plan-body').innerHTML = body;
+  }
+
+  function countsLine() {
+    const c = state.reportCounts;
+    if (!c) return state.claims.length || state.dataClaims.length ? `<span>Fact-check is going through ${state.claims.length} web claims and ${state.dataClaims.length} store numbers.</span>` : '';
+    return `<span>${state.claims.length} web claims</span><span class="pill supported">${c.web.supported} supported</span>${c.web.unsupported ? `<span class="pill unsupported">${c.web.unsupported} unsupported</span>` : ''}<span style="margin-left:8px">${state.dataClaims.length} store numbers</span><span class="pill supported">${c.data.recomputed} recomputed</span>${c.data.mismatch ? `<span class="pill mismatch" style="color:var(--warn);border-color:var(--warn)">${c.data.mismatch} corrected</span>` : ''}`;
+  }
+  function planSummary() {
+    const rb = state.runBrief;
+    return `<div class="report-status">${countsLine()}</div>
+      <article class="report" style="max-width:72ch">${pillify(markdown(state.report || ''), true)}</article>
+      <div class="summary-actions"><button type="button" class="primary-btn" data-goto="ranked">See the ranked plan</button><button type="button" class="ghost-btn" data-goto="context">See the store audit</button><button type="button" class="ghost-btn" data-goto="tests">See how to test it</button></div>
+      ${rb ? `<p class="note" style="margin-top:22px">Run brief: ${esc(rb.question)}${briefBits(rb).length ? ' · ' + briefBits(rb).map(esc).join(' · ') : ''}</p>` : ''}`;
+  }
+  const tilesHtml = (tiles) => tiles?.length ? `<div class="tiles">${tiles.map((t) => `<div class="tile"><div class="k">${esc(t.label)}</div><div class="v">${esc(t.display)} ${pt(`[${t.dataRef}]`)}</div></div>`).join('')}</div>` : '';
+  const sevTag = (f) => f.positive ? '<span class="sev good">working</span>' : `<span class="sev ${esc(f.severity)}">${f.severity === 'med' ? 'medium' : esc(f.severity)}</span>`;
+  function planContext() {
+    const p = state.profile; if (!p) return '<p class="empty">The store audit is still running.</p>';
+    const off = SRC_ORDER.filter((s) => state.runBrief && state.runBrief.sources && state.runBrief.sources[s] === false);
+    let html = `<h2>${esc(p.name)} <span class="demo-tag">Demo data</span></h2><p class="sub">${esc(p.domain)} · ${esc(p.category)} · ${esc(p.market)} · as of ${esc(p.asOf)} · ${state.ledger.size} data points in the ledger</p>
+      <p style="font-size:17px;max-width:75ch">${pt(p.headline)}</p>${tilesHtml(p.tiles)}`;
+    if (p.contradictions.length) html += `<h2>Where sources disagree</h2><div class="table-wrap"><table class="grid"><tr><th>Topic</th><th>One source says</th><th>Another says</th><th>What the plan does</th></tr>${p.contradictions.map((c) => `<tr><td>${esc(c.topic)}</td><td>${mono(c.first.source)} ${pt(c.first.claim)}</td><td>${mono(c.second.source)} ${pt(c.second.claim)}</td><td class="note">${esc(c.resolution)}</td></tr>`).join('')}</table></div>`;
+    html += '<h2>Audit by area</h2>';
+    for (const s of p.sections) {
+      html += `<div class="section"><div class="section-head">${s.source.map((x) => mono(x)).join('')}<h3>${esc(s.area)}</h3></div><div class="headline">${pt(s.headline)}</div>${tilesHtml(s.tiles)}`;
+      if (s.area === 'Email & SMS' && p.flows) html += `<div class="note" style="margin-top:6px">Klaviyo flows: which standard flows exist</div><div class="flows-map">${p.flows.map((f) => `<div class="flow-cell ${f.status}"><div class="fn"><span class="mark">${f.status === 'live' ? '✓' : f.status === 'warn' ? '⚠' : '✗'}</span>${esc(f.name)}${f.dataRef ? pt(` [${f.dataRef}]`) : ''}</div><div class="fnote">${esc(f.note)}</div></div>`).join('')}</div>`;
+      if (s.area === 'Catalogue & inventory' && p.quarters.length) html += `<div class="table-wrap"><table class="grid"><tr><th>Quarter</th><th>Best seller</th><th>Worst performer</th></tr>${p.quarters.map((q) => `<tr><td>${esc(q.quarter)}</td><td>${esc(q.best)} <span class="note">${esc(q.bestNote)}</span>${q.bestRef ? pt(` [${q.bestRef}]`) : ''}</td><td>${esc(q.worst)} <span class="note">${esc(q.worstNote)}</span>${q.worstRef ? pt(` [${q.worstRef}]`) : ''}</td></tr>`).join('')}</table></div><p class="note">Seasonality: Cold Brew carries summer and collapses in Q4; holiday gift stock doesn't sell after December.</p>`;
+      html += `<ul class="findings2">${s.findings.map((f) => `<li>${sevTag(f)}${pt(f.claim)}</li>`).join('')}</ul></div>`;
+    }
+    for (const s of off) html += `<div class="ghost-card">${mono(s)} <strong>${esc(srcLabel(s))}</strong> is off for this run. Connect it to audit ${s === 'klaviyo' ? 'flows, campaigns and list health' : s === 'skio' ? 'subscribers, churn, cancel reasons and dunning' : s === 'sms' ? 'SMS flows and campaigns' : 'spend, CAC and conversion'}.</div>`;
+    html += `<h2>What we couldn't see</h2><ul>${p.missing.map((m) => `<li>${esc(m)}</li>`).join('')}</ul><h2>What the audit asked research to find</h2><ol>${p.researchQuestions.map((q) => `<li>${esc(q)}</li>`).join('')}</ol>`;
+    return html;
+  }
+  function mathsHtml(o, open) {
+    const row = (k, i) => `<tr><td>${k}</td><td>${esc(i.display)} ${i.ref ? pt(i.ref) : ''}${i.note ? `<div class="note">${esc(i.note)}</div>` : ''}</td></tr>`;
+    return `<details class="maths" ${open ? 'open' : ''}><summary>Show the maths</summary><div class="maths-body"><table>
+      ${row('Audience', o.audience)}${row('Current rate', o.currentRate)}${row('Target rate', o.targetRate)}${row('Value per conversion', o.valuePerConversion)}
+      <tr><td>Confidence</td><td>${CONF[o.confidence][0]} (×${CONF[o.confidence][1]}) <div class="note">${esc(o.confidenceWhy)}</div></td></tr>
+      <tr><td>Effort</td><td>${EFFORT[o.effort][0]} (÷${EFFORT[o.effort][1]}) <div class="note">${esc(o.effortWhy)}</div></td></tr></table>
+      <div class="formula">Annual impact = audience × (target − current) × value × 12 = ${esc(o.maths)}</div>
+      <div class="formula">Score = ${usdShort(o.annualImpact)} × ${CONF[o.confidence][1]} ÷ ${EFFORT[o.effort][1]} = ${usdShort(o.score)}</div>
+      ${o.overlapNote ? `<p class="note">${esc(o.overlapNote)}</p>` : ''}</div></details>`;
+  }
+  function oppCard(o) {
+    const init = state.plan?.initiatives.find((i) => i.opportunityId === o.id);
+    const cls = o.locked ? 'locked' : o.excluded ? 'excluded' : '';
+    const rankTxt = o.rank ? `#${o.rank}` : o.locked ? '🔒' : '—';
+    const head = `<div class="opp-head"><div class="rank">${rankTxt}</div><div><h3>${esc(o.title)}${o.goalFit ? '<span class="goalfit">fits your goal</span>' : ''}</h3>
+      <div class="facts">${o.locked || o.excluded ? `<span>${esc((o.locked || o.excluded).message)}</span>` : `<span>Confidence <b>${CONF[o.confidence][0]}</b></span><span>Effort <b>${EFFORT[o.effort][0]}</b></span><span>Time to signal <b>~${o.timeToSignalWeeks} weeks</b></span><span>${esc(o.area)}</span>`}</div></div>
+      <div class="impact">${o.locked || o.excluded ? '' : `<div class="big">${usdShort(o.annualImpact)}<span style="font-size:14px;font-weight:500;color:var(--muted)">/yr</span></div><div class="small">score ${usdShort(o.score)}</div>`}</div></div>`;
+    if (o.locked || o.excluded) return `<div class="opp ${cls}">${head}</div>`;
+    let body = `<div class="opp-body"><h4>Why this, why now</h4><div>${pt(init ? init.why : o.rationale)}</div>`;
+    if (init) body += `<h4>Action plan</h4><ol>${init.steps.map((s) => `<li>${pt(s)}</li>`).join('')}</ol>
+      <div class="meta-grid"><div><span>Owner</span>${esc(init.owner)}</div><div><span>Tools</span>${esc(init.tools.join(', '))}</div><div><span>Depends on</span>${esc(init.dependencies.join(', ') || 'Nothing')}</div><div><span>What success looks like</span>${esc(init.success.metric)}: ${esc(init.success.target)} by ${esc(init.success.by)}</div></div>`;
+    body += mathsHtml(o, o.rank === 1) + '</div>';
+    return `<div class="opp">${head}${body}</div>`;
+  }
+  function planRanked() {
+    const items = state.priorities; if (!items) return '<p class="empty">The prioritiser is still scoring.</p>';
+    const ranked = items.filter((o) => o.rank), excluded = items.filter((o) => o.excluded), locked = items.filter((o) => o.locked);
+    const r = state.plan?.roadmap;
+    const col = (title, sub, list) => `<div class="road-col"><h4>${title} <span>${sub}</span></h4>${list.length ? list.map((i) => `<div class="road-item ${i.kind}">${esc(i.title)}</div>`).join('') : '<div class="note">Nothing scheduled</div>'}</div>`;
+    let html = `<h2>Ranked plan</h2><p class="sub">Score = annual impact × confidence (High 1.0 · Medium 0.7 · Low 0.4) ÷ effort (Small 1 · Medium 2 · Large 4). Every input carries a store-data <span class="dref">d</span> or web <span class="claim">c</span> citation; the maths runs in code, not in the model.</p>`;
+    if (r) html += `<h2 style="font-size:17px">30 / 60 / 90-day roadmap</h2><p class="sub">${esc(r.capacityNote)}</p><div class="roadmap">${col('Days 0–30', '', r.days30)}${col('Days 31–60', '', r.days60)}${col('Days 61–90', '', r.days90)}${col('After 90 days', '', r.later)}</div>`;
+    else html += '<div class="ghost-card">The planner is writing action plans and the roadmap.</div>';
+    html += ranked.map(oppCard).join('');
+    if (excluded.length) html += `<h2 style="font-size:17px">Ruled out by your constraints</h2>${excluded.map(oppCard).join('')}`;
+    if (locked.length) html += `<h2 style="font-size:17px">Locked: connect a source to unlock</h2>${locked.map(oppCard).join('')}`;
+    return html;
+  }
+  function planTests() {
+    const t = state.tests; if (!t) return '<p class="empty">The planner is designing the tests.</p>';
+    let html = `<h2>Test plan</h2><p class="sub">How you'll know each move worked, and how long it takes to find out.</p>
+      <div class="teach">Sample sizes use the standard two-proportion formula: <div class="formula" style="margin:6px 0">n per arm ≈ (1.96 + 0.84)² × [p₁(1−p₁) + p₂(1−p₂)] ÷ (p₂ − p₁)²</div>95% confidence, 80% power. When the store's traffic can't reach the sample in a sensible time, the plan says so and tests something that can.</div>`;
+    html += t.tests.map((x) => `<div class="test-card"><h3>#${x.rank} ${esc(x.title)}</h3><div class="table-wrap"><table class="grid">
+      <tr><td>Hypothesis</td><td>${esc(x.hypothesis)}</td></tr>
+      <tr><td>Design</td><td>${esc(x.design)}</td></tr>
+      <tr><td>Primary metric</td><td>${esc(x.primaryMetric)}</td></tr>
+      <tr><td>Guardrails</td><td>${esc(x.guardrails.join(' · '))}</td></tr>
+      <tr><td>Sample needed</td><td><strong>~${num(x.nPerArm)} per arm</strong> to detect ${pctS(x.baseline)} vs ${pctS(x.target)} at 95% confidence / 80% power</td></tr>
+      <tr><td>Who's eligible</td><td>${num(x.eligiblePerMonth)} ${pt(x.eligibleNote)}</td></tr>
+      <tr><td>Duration</td><td>~${x.weeksToEnrol} weeks to enrol both arms + ${x.readoutLagWeeks} week${x.readoutLagWeeks === 1 ? '' : 's'} to read out ≈ <strong>${Math.round(x.totalWeeks)} weeks</strong>${x.proxy ? `<div class="note">${esc(x.proxy)}</div>` : ''}</td></tr>
+      <tr><td>Decision rule</td><td>${esc(x.decisionRule)}</td></tr></table></div></div>`).join('');
+    if (t.feasibility.length) html += `<h2 style="font-size:17px">Tests we didn't run as asked</h2>${t.feasibility.map((f) => `<div class="feas ${f.feasible ? 'ok' : ''}"><strong>${esc(f.name)}</strong><div style="margin:4px 0">Needs <strong>~${num(f.nPerArm)} per arm</strong>; the store has ${num(f.available)} ${pt(f.availableLabel)}.</div><div class="note">${esc(f.instead)}</div></div>`).join('')}`;
+    return html;
+  }
+  function planSources() {
+    const fb = (k, v, label, extra = '') => `<button type="button" data-filter="${k}:${v}" aria-pressed="${k === 'kind' ? srcFilter.kind === v : srcFilter[k] === v}">${extra}${label}</button>`;
+    let html = `<h2>Sources</h2><p class="sub">Every web claim <span class="claim">c</span> and every store number <span class="dref">d</span> the crew used. Store numbers are demo data; web sources are illustrative.</p>
+      <div class="filters">${fb('kind', 'all', 'All')}${fb('kind', 'web', `Web (${state.webFindings.length})`)}${fb('kind', 'data', `Store data (${state.ledger.size})`)}</div>
+      <div class="filters">${SRC_ORDER.filter((s) => [...state.ledger.values()].some((e) => e.source === s)).map((s) => fb('source', s, srcLabel(s), mono(s))).join('')}${['supported', 'unsupported', 'recomputed', 'mismatch'].map((v) => fb('verdict', v, v)).join('')}</div>`;
+    const vOk = (id) => !srcFilter.verdict || state.verdicts.get(id)?.verdict === srcFilter.verdict;
+    const vPill = (id) => { const v = state.verdicts.get(id); return v ? `<span class="pill ${esc(v.verdict)}" ${v.verdict === 'mismatch' ? 'style="color:var(--warn);border-color:var(--warn)"' : v.verdict === 'recomputed' ? 'style="color:var(--ok);border-color:var(--ok)"' : ''}>${esc(v.verdict === 'mismatch' ? 'corrected' : v.verdict)}</span>` : '<span class="note">not cited</span>'; };
+    if (srcFilter.kind !== 'data' && !srcFilter.source) {
+      const rows = state.webFindings.filter((f) => vOk(f.id));
+      html += `<h2 style="font-size:17px">Web claims</h2><div class="table-wrap"><table class="grid"><tr><th></th><th>Claim</th><th>Source</th><th>Confidence</th><th>Fact-check</th></tr>${rows.map((f) => `<tr><td>${pt(`[${f.id}]`)}</td><td>${esc(f.claim)}<div class="note">${esc(f.evidence)}</div></td><td>${f.sources.map((s) => `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a>`).join(', ')}</td><td><span class="conf ${esc(f.confidence)}" style="display:inline-block;width:8px;height:8px;border-radius:50%"></span> ${esc(f.confidence)}</td><td>${vPill(f.id)}</td></tr>`).join('') || '<tr><td colspan="5" class="note">Nothing matches.</td></tr>'}</table></div>`;
+    }
+    if (srcFilter.kind !== 'web') {
+      const rows = [...state.ledger.values()].filter((e) => (!srcFilter.source || e.source === srcFilter.source) && vOk(e.id));
+      html += `<h2 style="font-size:17px">Store data ledger <span class="demo-tag">Demo data</span></h2><div class="table-wrap"><table class="grid"><tr><th></th><th>Source</th><th>Metric</th><th>Value</th><th>Tool call</th><th>Fact-check</th></tr>${rows.map((e) => `<tr><td>${pt(`[${e.id}]`)}</td><td>${mono(e.source)} ${esc(srcLabel(e.source))}</td><td>${esc(e.label)}${e.window ? `<div class="note">${esc(e.window)}</div>` : ''}</td><td><strong>${esc(fmtValue(e.value, e.unit))}</strong></td><td><code style="font-size:12px;color:var(--muted)">${esc(e.tool)}(${esc(Object.entries(e.args).map(([k, v]) => `${k}=${v}`).join(', '))}).${esc(e.field)}</code></td><td>${vPill(e.id)}</td></tr>`).join('') || '<tr><td colspan="6" class="note">Nothing matches.</td></tr>'}</table></div>`;
+    }
+    return html;
+  }
+  function briefBits(rb) {
+    const L = { convert_one_time_to_sub: 'Convert one-time buyers', reduce_churn: 'Reduce churn', acquire_direct: 'Acquire subscribers', raise_rev_per_sub: 'Revenue per subscriber', next_30_days: 'Next 30 days', this_quarter: 'This quarter (Q4)', next_6_months: 'Next 6 months', solo: 'Just me', small_team: 'Small team', agency: 'Agency' };
+    const bits = [];
+    if (rb.goal) bits.push(L[rb.goal] || rb.goal);
+    if (rb.timeframe) bits.push(L[rb.timeframe] || rb.timeframe);
+    if (rb.capacity) bits.push(L[rb.capacity] || rb.capacity);
+    if (rb.competitors?.length) bits.push(`vs ${rb.competitors.join(', ')}`);
+    if (rb.sources) { const on = SRC_ORDER.filter((s) => rb.sources[s] !== false); bits.push(`${on.length} of ${SRC_ORDER.length} sources`); }
+    return bits;
+  }
+
+  /* ---------- popovers for [dN] and [cN] ---------- */
+  function showPop(el) {
+    const pop = $('pop'); let html = '';
+    const d = el.dataset.d, c = el.dataset.c;
+    if (d) {
+      const e = state.ledger.get(d); const v = state.verdicts.get(d);
+      if (!e) return;
+      html = `<div class="ptop">${mono(e.source, false)}<div><div style="font-weight:600">${esc(srcLabel(e.source))}</div><div class="meta">${esc(d)} · <span class="demo-tag">Demo data</span></div></div></div>
+        <div>${esc(e.label)}</div><div class="val">${esc(fmtValue(e.value, e.unit))}</div>
+        <div class="meta">${e.window ? `Window: ${esc(e.window)} · ` : ''}As of ${esc(e.asOf)}</div>
+        <div class="meta" style="margin-top:6px"><code>${esc(e.tool)}(${esc(Object.entries(e.args).map(([k, x]) => `${k}=${x}`).join(', '))})</code> → <code>${esc(e.field)}</code></div>
+        ${v ? `<div style="margin-top:8px"><span class="pill ${esc(v.verdict)}" style="color:${v.verdict === 'mismatch' ? 'var(--warn)' : 'var(--ok)'};border-color:currentColor">${v.verdict === 'mismatch' ? 'corrected' : 'recomputed'}</span> <span class="meta">${pt(v.evidence)}</span></div>` : ''}`;
+    } else if (c) {
+      const f = state.webFindings.find((x) => x.id === c); const v = state.verdicts.get(c);
+      if (!f) return;
+      html = `<div class="meta">${esc(c)} · web claim · ${esc(f.confidence)} confidence</div><div style="margin:4px 0 6px;font-weight:500">${esc(f.claim)}</div>
+        <div class="meta">${esc(f.evidence)}</div>${f.sources.map((s) => `<div class="meta" style="margin-top:6px"><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a></div>`).join('')}
+        ${v ? `<div style="margin-top:8px"><span class="pill ${esc(v.verdict)}">${esc(v.verdict)}</span> <span class="meta">${esc(v.evidence)}</span></div>` : '<div class="meta" style="margin-top:8px">Not fact-checked yet.</div>'}`;
+    } else return;
+    document.querySelectorAll('.dref.active, .claim.active').forEach((x) => x.classList.remove('active'));
+    el.classList.add('active');
+    pop.innerHTML = html; pop.hidden = false;
+    const r = el.getBoundingClientRect(); const w = Math.min(380, window.innerWidth - 24);
+    pop.style.maxWidth = `${w}px`;
+    const ph = pop.offsetHeight;
+    const left = Math.max(12, Math.min(r.left - 20, window.innerWidth - w - 12));
+    const top = r.bottom + 8 + ph < window.innerHeight ? r.bottom + 8 : Math.max(12, r.top - ph - 8);
+    pop.style.left = `${left}px`; pop.style.top = `${top}px`;
+  }
+  const hidePop = () => { $('pop').hidden = true; document.querySelectorAll('.dref.active, .claim.active').forEach((x) => x.classList.remove('active')); };
+  document.addEventListener('click', (e) => {
+    const el = e.target.closest('.dref[data-d], .claim[data-c]');
+    if (el) { e.stopPropagation(); showPop(el); return; }
+    if (!e.target.closest('#pop')) hidePop();
+  }, true);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') hidePop();
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('.dref[data-d], .claim[data-c]')) { e.preventDefault(); showPop(e.target); }
+  });
+  document.addEventListener('scroll', hidePop, true);
+
+  /* ---------- trace entries for V2 kinds ---------- */
+  function v2EntryHtml(e) {
+    switch (e.kind) {
+      case 'tool': {
+        const args = Object.values(e.args || {});
+        const ids = e.ledgerIds === null ? 'pulling…' : e.ledgerIds.length ? `${e.ledgerIds.length} data point${e.ledgerIds.length === 1 ? '' : 's'} recorded ${e.ledgerIds.map((id) => pt(`[${id}]`)).join('')}` : 'no numbers returned';
+        return `${mono(e.source)}<div><div>Pulled ${esc(toolPhrase(e.tool))}${args.length ? ` (${esc(args.join(', '))})` : ''} from ${esc(srcLabel(e.source))}</div><div class="ids">${ids}</div></div>`;
+      }
+      case 'audit': return `<div class="headline">${pt(e.headline)}</div><ul class="plain">${e.findings.map((f) => `<li>${sevTag(f)}${pt(f.claim)}</li>`).join('')}</ul>`;
+      case 'profile': return `<div class="headline">Store Profile ready: ${state.ledger.size} data points.</div><div>${pt(e.profile.headline)}</div>${e.profile.contradictions.length ? `<div class="note" style="margin-top:6px">${e.profile.contradictions.length} place${e.profile.contradictions.length === 1 ? '' : 's'} where sources disagree: ${e.profile.contradictions.map((c) => esc(c.topic)).join('; ')}.</div>` : ''}<div class="headline" style="margin-top:8px">Questions for research</div><ol style="margin:4px 0 0;padding-left:18px">${e.profile.researchQuestions.map((q) => `<li>${esc(q)}</li>`).join('')}</ol>`;
+      case 'opps': return `<div class="headline">${e.items.length} opportunities, each with store data behind it</div><ul class="plain">${e.items.map((o) => `<li>${esc(o.title)}</li>`).join('')}</ul>${e.followups.length ? `<div class="headline" style="margin-top:8px">${e.followups.length} follow-up${e.followups.length === 1 ? '' : 's'}</div><ul class="plain">${e.followups.map((f) => `<li><span class="sev low">${f.kind}</span>${esc(f.question)}</li>`).join('')}</ul>` : ''}`;
+      case 'priorities': return `<div class="headline">Ranked by dollar score</div><ol style="margin:4px 0 0;padding-left:18px">${e.items.filter((o) => o.rank).map((o) => `<li>${esc(o.title)}: <strong>${usdShort(o.annualImpact)}/yr</strong> <span class="note">score ${usdShort(o.score)}</span></li>`).join('')}</ol>${e.items.some((o) => o.locked) ? `<div class="note" style="margin-top:4px">${e.items.filter((o) => o.locked).length} locked (source off)</div>` : ''}${e.items.some((o) => o.excluded) ? `<div class="note">${e.items.filter((o) => o.excluded).length} ruled out by a constraint</div>` : ''}`;
+      case 'plan': return `<div class="headline">Action plans for ${e.initiatives.length} moves, plus a 30/60/90 roadmap</div><ul class="plain">${e.initiatives.map((i) => `<li>#${i.rank} ${esc(i.title)}: ${i.steps.length} steps</li>`).join('')}</ul>`;
+      case 'tests': return `<div class="headline">${e.tests.length} test designs</div><ul class="plain">${e.tests.map((x) => `<li>#${x.rank}: ~${num(x.nPerArm)} per arm, ~${Math.round(x.totalWeeks)} weeks</li>`).join('')}</ul>${e.feasibility.map((f) => `<div class="note">Not feasible as asked: ${esc(f.name)} (needs ~${num(f.nPerArm)} per arm)</div>`).join('')}`;
+      case 'verdicts2': {
+        const web = e.verdicts.filter((v) => v.id.startsWith('c')), data = e.verdicts.filter((v) => v.id.startsWith('d'));
+        const odd = data.filter((v) => v.verdict !== 'recomputed');
+        return `<ul class="verdict-list">${web.map((v) => `<li><span class="pill ${esc(v.verdict)}">${esc(v.id)} ${esc(v.verdict)}</span><div>${esc(v.evidence)}</div></li>`).join('')}</ul>
+          <div class="headline" style="margin-top:8px">${data.length - odd.length} of ${data.length} store numbers recomputed from the ledger and matched</div>
+          <ul class="verdict-list">${odd.map((v) => `<li><span class="pill" style="color:var(--warn);border-color:var(--warn)">${esc(v.id)} corrected</span><div>${pt(v.evidence)}</div></li>`).join('')}</ul>`;
+      }
+      default: return '';
+    }
+  }
+
+  /* ---------- the right-hand panel while watching a V2 run ---------- */
+  function renderV2Report() {
+    const status = $('report-status');
+    if (!state.report) {
+      const running = [...state.agents.values()].filter((a) => a.status === 'running' && a.stage !== 'intake');
+      if (state.status === 'failed') status.textContent = `The run stopped: ${state.error || 'unknown error'}`;
+      else if (running.length) status.innerHTML = `<ul class="now-list">${running.map((a) => `<li><span class="who" style="--lane:${laneOf(a)}">${esc(a.label)}</span><span class="what">${esc(actionOf(a, true))}</span></li>`).join('')}</ul>`;
+      else status.textContent = 'Waiting for the next stage.';
+      const done = [state.profile && 'Store context', state.priorities && 'Ranked plan', state.tests && 'Test plan'].filter(Boolean);
+      $('report').innerHTML = `<p class="empty" style="margin-top:18px">${state.ledger.size ? `${state.ledger.size} store data points in the ledger so far.` : 'The auditors are about to pull store data.'} The plan appears here when the planner and fact-checker are done.</p>${done.length ? `<p><button type="button" class="ghost-btn" data-open-plan>Peek at the plan so far (${esc(done.join(', '))})</button></p>` : ''}`;
+      renderedReportKey = '';
+      return;
+    }
+    status.innerHTML = countsLine();
+    const key = `v2:${state.report.length}:${state.verdicts.size}`;
+    if (key === renderedReportKey) return;
+    renderedReportKey = key;
+    $('report').innerHTML = `<p><button type="button" class="primary-btn" data-open-plan>Open the full plan</button></p>${pillify(markdown(state.report), true)}`;
+  }
+  $('report').addEventListener('click', (e) => { if (e.target.closest('[data-open-plan]')) { planMode = 'plan'; if (replay.playing) replay.playing = false; invalidate(); } });
+
+  function render() { renderHeader(); renderFlow(); if (flow.screen) return; if (state.v2 && modeOf() === 'plan') { renderPlan(); return; } renderedPlanKey = ''; renderMap(); renderTrace(); renderReport(); }
   setInterval(() => { if (state.status === 'running' && !replay.active) renderHeader(); }, 1000);
 
   /* ---------- runs & stream ---------- */
@@ -905,7 +1645,7 @@
     const sel = $('runs');
     let runs = [];
     try {
-      runs = await (await fetch(`${API}/api/runs`)).json();
+      runs = await transport.runs();
       sel.innerHTML = `<option value="">${runs.length ? 'Past runs' : 'No runs yet'}</option>` + runs.map((r) => `<option value="${esc(r.runId)}" ${r.runId === current ? 'selected' : ''}>${esc(r.brief.slice(0, 60))}${r.brief.length > 60 ? '…' : ''} (${r.status})</option>`).join('');
       if (current && !runs.some((r) => r.runId === current)) sel.insertAdjacentHTML('beforeend', `<option value="${esc(current)}" selected>${esc(current)}</option>`);
     } catch { sel.innerHTML = '<option value="">Runs unavailable</option>'; }
@@ -915,8 +1655,10 @@
   if (API) $('cost').insertAdjacentHTML('afterend', `<span title="${esc(API)}" style="color:var(--dim)">via ${esc(new URL(API).hostname)}</span>`);
 
   function connect(runId) {
+    if (LOCAL) { if (!connectLocal(runId)) openFlow('ask'); return; }
     isLive = true;
     const es = new EventSource(`${API}/api/runs/${encodeURIComponent(runId)}/events`);
+    activeStream = es;
     es.onmessage = (m) => { try { receive(JSON.parse(m.data)); } catch (err) { console.error(err); } };
     es.addEventListener('done', () => { isLive = false; es.close(); invalidate(); });
     es.onerror = () => { if (state.status !== 'running') { isLive = false; es.close(); invalidate(); } };
@@ -924,19 +1666,20 @@
 
   // Open on the run in the URL; with none, on the latest run — the composer is a click away. An
   // empty install (no runs at all) opens the composer.
+  // Open on the run in the URL; with none, on the Ask screen (past runs are in the picker).
   (async () => {
     const wanted = new URLSearchParams(location.search).get('run');
-    if (wanted) connect(wanted);
+    // Deep links for demos: ?run=<id>&mode=watch|plan&tab=summary|context|ranked|tests|sources
+    const qp = new URLSearchParams(location.search);
+    if (qp.get('mode')) planMode = qp.get('mode');
+    if (qp.get('tab')) planTab = qp.get('tab');
+    try { demoInfo = await transport.store(); } catch { demoInfo = null; }
+    if (wanted && (!LOCAL || localRuns.has(wanted))) connect(wanted);
+    else openFlow('ask');
     render();
-    const runs = await loadRuns(wanted);
-    if (wanted) return;
-    if (runs.length) {
-      const q = new URLSearchParams(location.search); q.set('run', runs[0].runId);
-      history.replaceState(null, '', `?${q.toString()}`);
-      $('runs').value = runs[0].runId;
-      connect(runs[0].runId);
-    } else { noRunsYet = true; openComposer(true); render(); }
+    await loadRuns(wanted);
   })();
+  window.addEventListener('popstate', () => { const r = new URLSearchParams(location.search).get('run'); if (r && r !== state.runId) openRun(r, true); });
 })();
 </script>
 </body>

@@ -10,6 +10,9 @@ import { cors } from 'hono/cors';
 import { streamSSE } from 'hono/streaming';
 import { RunBus, type RunEvent } from './events.js';
 import { listStoredRuns, readRunEvents, summariseEvents, type RunSummary } from './run-store.js';
+import { fixture } from './connectors/demo-tools.js';
+import { EXAMPLE_QUESTIONS, buildIntake, normaliseRunBrief } from './v2/intake.js';
+import type { RunBrief } from './v2/types.js';
 
 const PAGE_URL = new URL('../ui/index.html', import.meta.url);
 const OFFICE_URL = new URL('../ui/office.js', import.meta.url);
@@ -42,9 +45,19 @@ export interface ResearchServerOptions {
   registry: RunRegistry;
   /** Starts a run from the page; resolves to its id once queued. */
   startRun: (brief: string) => string;
+  /** V2: starts a scripted growth-planner run (demo data) from a Run Brief. */
+  startDemoRun?: (brief: RunBrief, speed: number) => string;
+  /** V2: flushes a demo run's remaining events. */
+  skipRun?: (runId: string) => boolean;
+  /** When true, a bare { brief } never launches real (paid) agents. */
+  demoOnly?: boolean;
 }
 
-export function createResearchApp({ registry, startRun }: ResearchServerOptions): Hono {
+/** Optional demo password (DEMO_PASSWORD) and a simple per-IP rate limit on starting runs. */
+const RUN_LIMIT = { windowMs: 10 * 60_000, max: 20 };
+const runStarts = new Map<string, number[]>();
+
+export function createResearchApp({ registry, startRun, startDemoRun, skipRun, demoOnly }: ResearchServerOptions): Hono {
   const app = new Hono();
 
   // Read per request so edits to the page show on refresh during development.
@@ -56,13 +69,49 @@ export function createResearchApp({ registry, startRun }: ResearchServerOptions)
   // The demo page may be served from another origin (Vercel) with this server behind a tunnel.
   app.use('/api/*', cors());
 
+  app.use('/api/*', async (c, next) => {
+    const password = process.env.DEMO_PASSWORD;
+    if (password && c.req.method === 'POST' && c.req.header('x-demo-password') !== password) {
+      return c.json({ error: 'This demo needs a password.', needsPassword: true }, 401);
+    }
+    await next();
+  });
+
   app.get('/api/runs', (c) => c.json(registry.list()));
 
+  // V2: the demo store the Connect screen shows, and the Intake agent's follow-up questions.
+  app.get('/api/store', (c) =>
+    c.json({ store: fixture.store, sources: fixture.sources, examples: EXAMPLE_QUESTIONS, demo: true, passwordRequired: !!process.env.DEMO_PASSWORD }),
+  );
+  app.post('/api/intake', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { question?: unknown };
+    const question = typeof body.question === 'string' ? body.question.trim() : '';
+    if (!question) return c.json({ error: 'Ask a question first.' }, 400);
+    return c.json(buildIntake(question));
+  });
+
   app.post('/api/runs', async (c) => {
-    const body = (await c.req.json().catch(() => ({}))) as { brief?: unknown };
+    const ip = c.req.header('x-forwarded-for')?.split(',')[0].trim() || 'local';
+    const now = Date.now();
+    const recent = (runStarts.get(ip) ?? []).filter((t) => now - t < RUN_LIMIT.windowMs);
+    if (recent.length >= RUN_LIMIT.max) return c.json({ error: 'Too many runs started; try again in a few minutes.' }, 429);
+    const body = (await c.req.json().catch(() => ({}))) as { brief?: unknown; runBrief?: Partial<RunBrief>; speed?: unknown };
+    if (body.runBrief && typeof body.runBrief.question === 'string' && body.runBrief.question.trim()) {
+      if (!startDemoRun) return c.json({ error: 'This server does not run the growth planner.' }, 400);
+      const speed = typeof body.speed === 'number' && body.speed > 0 && body.speed <= 50 ? body.speed : 5;
+      runStarts.set(ip, [...recent, now]);
+      return c.json({ runId: startDemoRun(normaliseRunBrief({ ...body.runBrief, question: body.runBrief.question.trim() }), speed) }, 201);
+    }
     const brief = typeof body.brief === 'string' ? body.brief.trim() : '';
     if (!brief) return c.json({ error: 'Write the brief first.' }, 400);
+    if (demoOnly) return c.json({ error: 'Live agent runs are off in demo mode.' }, 400);
+    runStarts.set(ip, [...recent, now]);
     return c.json({ runId: startRun(brief) }, 201);
+  });
+
+  app.post('/api/runs/:id/skip', (c) => {
+    const ok = skipRun?.(c.req.param('id')) ?? false;
+    return ok ? c.json({ ok }) : c.json({ error: 'Nothing to skip.' }, 404);
   });
 
   app.get('/api/runs/:id/events', (c) => {

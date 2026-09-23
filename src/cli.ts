@@ -11,6 +11,10 @@ import { runResearchPipeline } from './pipeline.js';
 import { RESEARCH_DATA_DIR, createRunSink, newRunId, readRunEvents } from './run-store.js';
 import { buildSampleRun } from './sample-run.js';
 import { RunRegistry, createResearchApp } from './server.js';
+import { buildDemoRun } from './v2/demo-run.js';
+import { defaultRunBrief } from './v2/intake.js';
+import { playInto, type Playback } from './v2/playback.js';
+import type { RunBrief } from './v2/types.js';
 
 const DEFAULT_PORT = 4100;
 /** Every agent runs on this unless RESEARCH_MODEL or --model says otherwise. */
@@ -40,10 +44,41 @@ interface Host {
   url: (runId?: string) => string;
 }
 
-function startHost(port: number, startRun: (brief: string) => string): Host {
+const playbacks = new Map<string, Playback>();
+
+/** V2: a scripted growth-planner run from a Run Brief, recorded like any other run. */
+function launchDemoRun(registry: RunRegistry, brief: RunBrief, speed: number): string {
+  const runId = `${newRunId()}-demo`;
+  const bus = new RunBus(runId, Date.now(), createRunSink(runId));
+  registry.add(bus);
+  playbacks.set(runId, playInto(bus, buildDemoRun(runId, brief, { playback: speed }), speed));
+  return runId;
+}
+
+function startHost(port: number, startRun: (brief: string) => string, demoOnly = false): Host {
   const registry = new RunRegistry();
-  const app = createResearchApp({ registry, startRun });
-  serve({ fetch: app.fetch, port }, () => {});
+  const app = createResearchApp({
+    registry,
+    startRun,
+    demoOnly,
+    startDemoRun: (brief, speed) => launchDemoRun(registry, brief, speed),
+    skipRun: (runId) => {
+      const p = playbacks.get(runId);
+      if (!p) return false;
+      p.skip();
+      playbacks.delete(runId);
+      return true;
+    },
+  });
+  const server = serve({ fetch: app.fetch, port }, () => {});
+  server.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`\nPort ${port} is already in use (probably another copy of this server).`);
+      console.error(`Open http://localhost:${port}/ if it's already running, stop it, or pick another port with --port 4200.`);
+      process.exit(1);
+    }
+    throw err;
+  });
   const url = (runId?: string) => `http://localhost:${port}/${runId ? `?run=${encodeURIComponent(runId)}` : ''}`;
   return { registry, port, url };
 }
@@ -127,6 +162,30 @@ program
     const url = host.url(bus.runId);
     console.log(url);
     if (opts.open) openInBrowser(url);
+  });
+
+program
+  .command('demo')
+  .description('V2 growth planner on demo data: Ask → Clarify → Connect → Watch → Plan. No agents, no cost.')
+  .option('--port <n>', 'visualizer port', parsePositive, DEFAULT_PORT)
+  .option('--no-open', 'do not open a browser')
+  .option('--play <speed>', 'also start a demo run right away at this speed (e.g. 5)', parsePositive)
+  .action((opts: { port: number; open: boolean; play?: number }) => {
+    const host = startHost(opts.port, () => '', true);
+    let url = host.url();
+    if (opts.play) url = host.url(launchDemoRun(host.registry, defaultRunBrief('How do I get more of my customers onto subscription?'), opts.play));
+    console.log(url);
+    console.log('Growth planner demo (fictional store, demo data only). Live agent runs are off. Ctrl-C to stop.');
+    if (opts.open) openInBrowser(url);
+  });
+
+program
+  .command('export-demo')
+  .description('Write the V2 demo as one self-contained HTML file that runs offline (open it by double-clicking)')
+  .option('--out <file>', 'output file', join(RESEARCH_DATA_DIR, '..', '..', 'site', 'growth-planner-demo.html'))
+  .action(async (opts: { out: string }) => {
+    const { buildStandalone } = await import('./v2/standalone.js');
+    console.log(await buildStandalone(opts.out));
   });
 
 program

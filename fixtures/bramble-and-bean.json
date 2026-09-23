@@ -1,0 +1,790 @@
+{
+  "$comment": "Demo store fixture. Bramble & Bean Coffee Co. is fictional and every number here is invented but internally consistent. One owner; change numbers here only (and run `pnpm test`, which checks the worked examples in the V2 spec still hold). Keys are source -> tool name, exactly as the MCP tools are named. A leaf shaped { value, unit, label } is a metric: every one an agent pulls gets a data-ledger id [dN].",
+  "store": {
+    "id": "demo-bramble-and-bean",
+    "name": "Bramble & Bean Coffee Co.",
+    "domain": "brambleandbean.example",
+    "category": "Specialty coffee",
+    "market": "United States",
+    "asOf": "2026-09-21",
+    "demo": true
+  },
+  "sources": {
+    "shopify": {
+      "label": "Shopify",
+      "kind": "Store",
+      "provides": "Orders, customers, products, inventory, installed apps",
+      "syncedMinutesAgo": 6,
+      "required": true
+    },
+    "klaviyo": {
+      "label": "Klaviyo",
+      "kind": "Email",
+      "provides": "Flows, campaigns, list health",
+      "syncedMinutesAgo": 11
+    },
+    "sms": {
+      "label": "Postscript",
+      "kind": "SMS",
+      "provides": "SMS subscribers, flows, campaigns",
+      "syncedMinutesAgo": 14
+    },
+    "meta": {
+      "label": "Meta Ads",
+      "kind": "Paid social",
+      "provides": "Spend, CAC, ROAS, top creatives",
+      "syncedMinutesAgo": 22
+    },
+    "tiktok": {
+      "label": "TikTok Ads",
+      "kind": "Paid social",
+      "provides": "Spend and ROAS",
+      "syncedMinutesAgo": 22
+    },
+    "tiktokshop": {
+      "label": "TikTok Shop",
+      "kind": "Marketplace",
+      "provides": "GMV, orders, buyer sync status",
+      "syncedMinutesAgo": 31
+    },
+    "skio": {
+      "label": "Skio",
+      "kind": "Subscriptions",
+      "provides": "Subscribers, churn, cancel reasons, dunning, LTV",
+      "syncedMinutesAgo": 4
+    }
+  },
+  "shopify": {
+    "get_store_profile": {
+      "revenue": {
+        "value": 6800000,
+        "unit": "usd",
+        "window": "12m",
+        "label": "Revenue, trailing 12 months"
+      },
+      "orders": {
+        "value": 148000,
+        "unit": "count",
+        "window": "12m",
+        "label": "Orders, trailing 12 months"
+      },
+      "aov": {
+        "value": 46,
+        "unit": "usd",
+        "window": "12m",
+        "label": "Average order value"
+      },
+      "customers": {
+        "value": 58000,
+        "unit": "count",
+        "window": "12m",
+        "label": "Customers who ordered in the last 12 months"
+      },
+      "first_time_buyers_per_month": {
+        "value": 3100,
+        "unit": "count_per_month",
+        "window": "90d",
+        "label": "First-time buyers per month (last 90 days)"
+      },
+      "q4_revenue_share": {
+        "value": 0.31,
+        "unit": "ratio",
+        "window": "12m",
+        "label": "Share of annual revenue in Q4"
+      },
+      "abandoned_cart_utm_revenue": {
+        "value": 96000,
+        "unit": "usd",
+        "window": "90d",
+        "label": "Orders with abandoned-cart UTMs, Shopify-attributed"
+      }
+    },
+    "get_products": {
+      "active_skus": {
+        "value": 42,
+        "unit": "count",
+        "label": "Active SKUs"
+      },
+      "sub_eligible_skus": {
+        "value": 31,
+        "unit": "count",
+        "label": "Subscription-eligible SKUs"
+      },
+      "bag_days_supply": {
+        "value": 14,
+        "unit": "days",
+        "label": "Days a 12oz bag lasts at two cups a day (product metafield)"
+      },
+      "price_range": "$14 to $42",
+      "top_products": [
+        "House Blend 12oz",
+        "Holiday Blend 2lb",
+        "Cold Brew Packs (6)",
+        "Ethiopia Guji 12oz",
+        "Decaf Swiss Water 12oz"
+      ]
+    },
+    "get_inventory_levels": {
+      "guji_days_cover": {
+        "value": 9,
+        "unit": "days",
+        "label": "Ethiopia Guji 12oz: days of inventory cover"
+      },
+      "decaf_days_cover": {
+        "value": 140,
+        "unit": "days",
+        "label": "Decaf Swiss Water 12oz: days of inventory cover"
+      },
+      "median_days_cover": {
+        "value": 38,
+        "unit": "days",
+        "label": "Median days of cover across active SKUs"
+      }
+    },
+    "get_sales_by_product": {
+      "$args": "quarter",
+      "cases": {
+        "Q4-2025": {
+          "best_product": "Holiday Blend 2lb",
+          "best_revenue": {
+            "value": 412000,
+            "unit": "usd",
+            "window": "Q4 2025",
+            "label": "Q4 2025 best seller revenue (Holiday Blend 2lb)"
+          },
+          "worst_product": "Cold Brew Packs (6)",
+          "worst_change": {
+            "value": -0.61,
+            "unit": "ratio",
+            "window": "Q4 2025 vs Q3 2025",
+            "label": "Cold Brew Packs revenue change, Q4 vs Q3"
+          }
+        },
+        "Q1-2026": {
+          "best_product": "House Blend 12oz",
+          "best_revenue": {
+            "value": 398000,
+            "unit": "usd",
+            "window": "Q1 2026",
+            "label": "Q1 2026 best seller revenue (House Blend 12oz)"
+          },
+          "worst_product": "Holiday Blend gift set",
+          "worst_change": {
+            "value": -0.88,
+            "unit": "ratio",
+            "window": "Q1 2026 vs Q4 2025",
+            "label": "Holiday Blend gift set revenue change, Q1 vs Q4"
+          }
+        },
+        "Q2-2026": {
+          "best_product": "Cold Brew Packs (6)",
+          "best_revenue": {
+            "value": 356000,
+            "unit": "usd",
+            "window": "Q2 2026",
+            "label": "Q2 2026 best seller revenue (Cold Brew Packs)"
+          },
+          "worst_product": "Holiday Blend gift set",
+          "worst_units_on_hand": {
+            "value": 1140,
+            "unit": "count",
+            "window": "Q2 2026",
+            "label": "Holiday Blend gift sets on hand with no sales (dead stock)"
+          }
+        },
+        "Q3-2026": {
+          "best_product": "Cold Brew Packs (6)",
+          "best_revenue": {
+            "value": 371000,
+            "unit": "usd",
+            "window": "Q3 2026 to date",
+            "label": "Q3 2026 best seller revenue (Cold Brew Packs)"
+          },
+          "worst_product": "Decaf Swiss Water 12oz",
+          "worst_change": {
+            "value": -0.22,
+            "unit": "ratio",
+            "window": "Q3 2026 vs Q2 2026",
+            "label": "Decaf Swiss Water revenue change, Q3 vs Q2"
+          }
+        }
+      }
+    },
+    "get_repurchase_rates": {
+      "$args": "window",
+      "cases": {
+        "90d": {
+          "rate": {
+            "value": 0.24,
+            "unit": "ratio",
+            "window": "90d",
+            "label": "Customers who order again within 90 days"
+          }
+        },
+        "12m": {
+          "rate": {
+            "value": 0.38,
+            "unit": "ratio",
+            "window": "12m",
+            "label": "Customers who order again within 12 months"
+          }
+        }
+      }
+    },
+    "get_cohorts": {
+      "first_to_sub_60d": {
+        "value": 0.04,
+        "unit": "ratio",
+        "window": "60d",
+        "label": "First-time buyers who start a subscription within 60 days"
+      },
+      "lapsed_customers": {
+        "value": 19000,
+        "unit": "count",
+        "window": "120d+",
+        "label": "Lapsed customers (no order in 120+ days)"
+      },
+      "newly_lapsed_per_month": {
+        "value": 1580,
+        "unit": "count_per_month",
+        "window": "90d",
+        "label": "Customers crossing 120 days without an order, per month"
+      },
+      "organic_reactivation_rate": {
+        "value": 0.02,
+        "unit": "ratio",
+        "window": "90d",
+        "label": "Lapsed customers who come back on their own within 90 days"
+      },
+      "m1_repeat_oldest": {
+        "value": 0.31,
+        "unit": "ratio",
+        "window": "Q4 2025 cohort",
+        "label": "Month-1 repeat rate, Q4 2025 cohort"
+      },
+      "m1_repeat_latest": {
+        "value": 0.26,
+        "unit": "ratio",
+        "window": "Q3 2026 cohort",
+        "label": "Month-1 repeat rate, Q3 2026 cohort"
+      },
+      "curve": [
+        {
+          "cohort": "Q4 2025",
+          "m1": 0.31,
+          "m3": 0.24,
+          "m6": 0.18
+        },
+        {
+          "cohort": "Q1 2026",
+          "m1": 0.29,
+          "m3": 0.22,
+          "m6": 0.16
+        },
+        {
+          "cohort": "Q2 2026",
+          "m1": 0.27,
+          "m3": 0.21,
+          "m6": null
+        },
+        {
+          "cohort": "Q3 2026",
+          "m1": 0.26,
+          "m3": null,
+          "m6": null
+        }
+      ]
+    },
+    "get_installed_apps": {
+      "apps": [
+        "Klaviyo",
+        "Postscript",
+        "Skio",
+        "Okendo (reviews)",
+        "Gorgias (support)"
+      ],
+      "skio_klaviyo_sync": {
+        "value": 0,
+        "unit": "bool",
+        "label": "Skio to Klaviyo subscriber sync (is_subscriber property) enabled"
+      },
+      "tiktokshop_klaviyo_sync": {
+        "value": 0,
+        "unit": "bool",
+        "label": "TikTok Shop buyers synced to Klaviyo"
+      },
+      "okendo_connected": {
+        "value": 0,
+        "unit": "bool",
+        "label": "Okendo reviews connected to this planner"
+      }
+    }
+  },
+  "klaviyo": {
+    "list_flows": {
+      "flows": [
+        {
+          "id": "welcome",
+          "name": "Welcome series",
+          "status": "live",
+          "emails": 3,
+          "subOffer": false
+        },
+        {
+          "id": "abandoned_cart",
+          "name": "Abandoned cart",
+          "status": "live",
+          "emails": 3,
+          "subOffer": false
+        },
+        {
+          "id": "post_purchase",
+          "name": "Post-purchase: Thank you",
+          "status": "live",
+          "emails": 1,
+          "subOffer": false
+        },
+        {
+          "id": "browse_abandonment",
+          "name": "Browse abandonment",
+          "status": "missing"
+        },
+        {
+          "id": "winback",
+          "name": "Winback",
+          "status": "missing"
+        },
+        {
+          "id": "replenishment",
+          "name": "Replenishment",
+          "status": "missing"
+        },
+        {
+          "id": "sub_upcoming_order",
+          "name": "Subscription upcoming order",
+          "status": "missing"
+        }
+      ],
+      "live_flows": {
+        "value": 3,
+        "unit": "count",
+        "label": "Live flows"
+      },
+      "missing_standard_flows": {
+        "value": 4,
+        "unit": "count",
+        "label": "Standard flows not built"
+      }
+    },
+    "get_flow_performance": {
+      "$args": "flowId",
+      "cases": {
+        "post_purchase": {
+          "recipients": {
+            "value": 9280,
+            "unit": "count",
+            "window": "90d",
+            "label": "Post-purchase flow recipients, last 90 days"
+          },
+          "placed_order_rate": {
+            "value": 0.018,
+            "unit": "ratio",
+            "window": "90d",
+            "label": "Post-purchase flow placed-order rate"
+          },
+          "sub_offer": {
+            "value": 0,
+            "unit": "bool",
+            "label": "Post-purchase flow includes a subscribe offer"
+          }
+        },
+        "abandoned_cart": {
+          "recipients": {
+            "value": 11400,
+            "unit": "count",
+            "window": "90d",
+            "label": "Abandoned cart flow recipients, last 90 days"
+          },
+          "placed_order_rate": {
+            "value": 0.062,
+            "unit": "ratio",
+            "window": "90d",
+            "label": "Abandoned cart flow placed-order rate"
+          },
+          "revenue_klaviyo": {
+            "value": 148000,
+            "unit": "usd",
+            "window": "90d",
+            "label": "Abandoned cart revenue, Klaviyo-attributed (5-day window)"
+          }
+        },
+        "welcome": {
+          "recipients": {
+            "value": 8100,
+            "unit": "count",
+            "window": "90d",
+            "label": "Welcome series recipients, last 90 days"
+          },
+          "placed_order_rate": {
+            "value": 0.024,
+            "unit": "ratio",
+            "window": "90d",
+            "label": "Welcome series placed-order rate"
+          }
+        }
+      }
+    },
+    "list_campaigns": {
+      "campaigns_90d": {
+        "value": 38,
+        "unit": "count",
+        "window": "90d",
+        "label": "Email campaigns sent, last 90 days"
+      },
+      "sub_campaigns_90d": {
+        "value": 2,
+        "unit": "count",
+        "window": "90d",
+        "label": "Campaigns that mention subscribing"
+      }
+    },
+    "get_list_health": {
+      "list_size": {
+        "value": 96000,
+        "unit": "count",
+        "label": "Email list size"
+      },
+      "engaged_90d": {
+        "value": 0.38,
+        "unit": "ratio",
+        "window": "90d",
+        "label": "List engaged in the last 90 days"
+      },
+      "email_revenue_share": {
+        "value": 0.22,
+        "unit": "ratio",
+        "window": "12m",
+        "label": "Email share of total revenue"
+      },
+      "email_revenue": {
+        "value": 1500000,
+        "unit": "usd",
+        "window": "12m",
+        "label": "Email-attributed revenue"
+      },
+      "flow_share_of_email": {
+        "value": 0.18,
+        "unit": "ratio",
+        "window": "12m",
+        "label": "Flows' share of email revenue"
+      },
+      "identified_browsers_per_month": {
+        "value": 5200,
+        "unit": "count_per_month",
+        "window": "90d",
+        "label": "Identified visitors who viewed a product without adding to cart, per month"
+      }
+    }
+  },
+  "sms": {
+    "get_subscriber_count": {
+      "subscribers": {
+        "value": 14000,
+        "unit": "count",
+        "label": "SMS subscribers"
+      }
+    },
+    "list_sms_flows": {
+      "flows": [
+        {
+          "id": "sms_welcome",
+          "name": "SMS welcome",
+          "status": "live"
+        },
+        {
+          "id": "sms_post_purchase",
+          "name": "SMS post-purchase",
+          "status": "missing"
+        },
+        {
+          "id": "sms_cart",
+          "name": "SMS abandoned cart",
+          "status": "missing"
+        }
+      ],
+      "live_flows": {
+        "value": 1,
+        "unit": "count",
+        "label": "Live SMS flows"
+      }
+    },
+    "get_sms_campaign_performance": {
+      "campaigns_per_month": {
+        "value": 4,
+        "unit": "count_per_month",
+        "window": "90d",
+        "label": "SMS campaigns per month"
+      },
+      "sms_revenue": {
+        "value": 310000,
+        "unit": "usd",
+        "window": "12m",
+        "label": "SMS-attributed revenue"
+      }
+    }
+  },
+  "meta": {
+    "get_account_performance": {
+      "spend": {
+        "value": 65000,
+        "unit": "usd_per_month",
+        "window": "30d",
+        "label": "Meta spend per month"
+      },
+      "prospecting_spend": {
+        "value": 45000,
+        "unit": "usd_per_month",
+        "window": "30d",
+        "label": "Meta prospecting spend per month"
+      },
+      "roas": {
+        "value": 1.9,
+        "unit": "ratio",
+        "window": "30d",
+        "label": "Meta blended ROAS"
+      },
+      "cac": {
+        "value": 58,
+        "unit": "usd",
+        "window": "30d",
+        "label": "Meta cost per new customer"
+      },
+      "new_customers_per_month": {
+        "value": 776,
+        "unit": "count_per_month",
+        "window": "30d",
+        "label": "New customers from Meta prospecting per month"
+      },
+      "new_customer_sub_rate": {
+        "value": 0.09,
+        "unit": "ratio",
+        "window": "60d",
+        "label": "Meta-acquired first-time buyers who subscribe within 60 days (UTM-matched to Skio)"
+      },
+      "optimisation_event": "Purchase"
+    },
+    "get_top_creatives": {
+      "creatives": [
+        {
+          "theme": "20% off your first bag",
+          "share": 0.34
+        },
+        {
+          "theme": "Single-origin UGC unboxing",
+          "share": 0.22
+        },
+        {
+          "theme": "Holiday gift bundle (seasonal)",
+          "share": 0.17
+        },
+        {
+          "theme": "Roaster story video",
+          "share": 0.15
+        },
+        {
+          "theme": "Subscribe and save",
+          "share": 0.04
+        }
+      ],
+      "sub_creative_share": {
+        "value": 0.04,
+        "unit": "ratio",
+        "window": "30d",
+        "label": "Share of Meta spend on subscription-led creative"
+      }
+    }
+  },
+  "tiktok": {
+    "get_ads_performance": {
+      "spend": {
+        "value": 12000,
+        "unit": "usd_per_month",
+        "window": "30d",
+        "label": "TikTok Ads spend per month"
+      },
+      "roas": {
+        "value": 1.2,
+        "unit": "ratio",
+        "window": "30d",
+        "label": "TikTok Ads ROAS"
+      }
+    }
+  },
+  "tiktokshop": {
+    "get_shop_performance": {
+      "gmv": {
+        "value": 22000,
+        "unit": "usd_per_month",
+        "window": "30d",
+        "label": "TikTok Shop GMV per month"
+      },
+      "orders": {
+        "value": 710,
+        "unit": "count_per_month",
+        "window": "30d",
+        "label": "TikTok Shop orders per month"
+      },
+      "first_time_buyers": {
+        "value": 580,
+        "unit": "count_per_month",
+        "window": "30d",
+        "label": "TikTok Shop first-time buyers per month"
+      },
+      "sub_conversion": {
+        "value": 0,
+        "unit": "ratio",
+        "window": "60d",
+        "label": "TikTok Shop buyers who start a subscription"
+      },
+      "shopify_matched_orders": {
+        "value": 655,
+        "unit": "count_per_month",
+        "window": "30d",
+        "label": "TikTok Shop orders that reached Shopify (net of cancels)"
+      }
+    },
+    "get_shop_customers_sync_status": {
+      "synced_to_klaviyo": {
+        "value": 0,
+        "unit": "bool",
+        "label": "TikTok Shop buyers synced to Klaviyo"
+      },
+      "buyers_with_email": {
+        "value": 0.71,
+        "unit": "ratio",
+        "label": "TikTok Shop buyers with a usable email on the order"
+      }
+    }
+  },
+  "skio": {
+    "get_subscription_summary": {
+      "active_subscribers": {
+        "value": 6800,
+        "unit": "count",
+        "label": "Active subscribers"
+      },
+      "sub_revenue_share": {
+        "value": 0.38,
+        "unit": "ratio",
+        "window": "12m",
+        "label": "Subscription share of revenue"
+      },
+      "sub_order_value": {
+        "value": 34,
+        "unit": "usd",
+        "label": "Average subscription order value"
+      },
+      "default_plan": "2 x 12oz every 4 weeks",
+      "cadence_4w_share": {
+        "value": 0.61,
+        "unit": "ratio",
+        "label": "Subscribers on a 4-week cadence"
+      }
+    },
+    "get_churn": {
+      "monthly_churn": {
+        "value": 0.078,
+        "unit": "ratio",
+        "window": "90d",
+        "label": "Monthly subscriber churn (90-day average)"
+      }
+    },
+    "get_cancel_reasons": {
+      "cancel_sessions": {
+        "value": 900,
+        "unit": "count_per_month",
+        "window": "90d",
+        "label": "Cancel-flow sessions per month"
+      },
+      "save_rate": {
+        "value": 0.12,
+        "unit": "ratio",
+        "window": "90d",
+        "label": "Cancel-flow save rate"
+      },
+      "reason_too_much": {
+        "value": 0.34,
+        "unit": "ratio",
+        "window": "90d",
+        "label": "Cancels citing \"too much coffee\""
+      },
+      "reason_price": {
+        "value": 0.21,
+        "unit": "ratio",
+        "window": "90d",
+        "label": "Cancels citing price"
+      },
+      "reason_taste": {
+        "value": 0.14,
+        "unit": "ratio",
+        "window": "90d",
+        "label": "Cancels citing taste or variety"
+      },
+      "reason_other": {
+        "value": 0.31,
+        "unit": "ratio",
+        "window": "90d",
+        "label": "Cancels citing moving or other"
+      },
+      "saved_extra_orders": {
+        "value": 4.3,
+        "unit": "orders",
+        "window": "12m",
+        "label": "Extra orders a saved subscriber places, on average"
+      },
+      "offers_shown": "10% off next order (only offer; no skip or cadence change before cancel)"
+    },
+    "get_skip_swap_usage": {
+      "skip_usage": {
+        "value": 0.03,
+        "unit": "ratio",
+        "window": "90d",
+        "label": "Subscribers who used skip"
+      },
+      "swap_usage": {
+        "value": 0.05,
+        "unit": "ratio",
+        "window": "90d",
+        "label": "Subscribers who swapped a product"
+      }
+    },
+    "get_dunning_performance": {
+      "failed_per_month": {
+        "value": 188,
+        "unit": "count_per_month",
+        "window": "90d",
+        "label": "Failed subscription payments per month"
+      },
+      "recovery_rate": {
+        "value": 0.48,
+        "unit": "ratio",
+        "window": "90d",
+        "label": "Dunning recovery rate"
+      }
+    },
+    "get_ltv_comparison": {
+      "sub_ltv": {
+        "value": 410,
+        "unit": "usd",
+        "window": "12m",
+        "label": "12-month LTV, subscriber"
+      },
+      "one_time_ltv": {
+        "value": 118,
+        "unit": "usd",
+        "window": "12m",
+        "label": "12-month LTV, one-time buyer"
+      }
+    }
+  }
+}

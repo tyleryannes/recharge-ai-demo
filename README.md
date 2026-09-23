@@ -1,4 +1,51 @@
-# Research crew
+# Research crew → Growth Planner (V2)
+
+## V2 demo: the Merchant Growth Planner (demo data, no agents, no cost)
+
+A merchant asks one question, answers a few follow-ups with suggested answers drawn from their store's data,
+picks which sources are connected, and then watches a crew audit the store (Shopify, Klaviyo, Postscript,
+Meta, TikTok Ads, TikTok Shop, Skio), research around what it found, and return a **ranked plan**: what to do
+first, why (every store number cited `[dN]`, every web claim cited `[cN]`), exactly how, and how to test it.
+
+The store, **Bramble & Bean Coffee Co.**, is fictional. Every store number is demo data from one fixture file,
+and every web source is illustrative (example.com).
+
+```sh
+./demo.sh                 # installs if needed, serves http://localhost:4100 and opens it
+./demo.sh --play 5        # …and starts a run straight away at 5×
+pnpm research demo        # same, without the install step
+pnpm research export-demo --out growth-planner-demo.html   # one self-contained HTML file, runs offline
+```
+
+The flow: **Ask → Clarify → Connect → Watch → Plan**. The plan has five tabs: Summary, Store context (with the
+Klaviyo flows map and best/worst products by quarter), Ranked plan (scoring maths, action steps, 30/60/90
+roadmap), Test plan (sample sizes computed in code, plus tests that can't be run as asked), and Sources (the
+data ledger and web claims with fact-check verdicts). Try switching Klaviyo or Skio off on Connect: the
+dependent recommendations lock and the ranking changes. "Skip to the plan" jumps to the end of a run.
+
+Where the V2 pieces live:
+
+- `fixtures/bramble-and-bean.json`: the demo store, keyed by source → MCP tool name. Change numbers here only.
+- `src/connectors/`: the connector layer. `demo-tools.ts` answers store tools from the fixture and records every
+  metric in the data ledger (`ledger.ts`); `mcp.ts` exposes the same tools as in-process MCP servers
+  (`mcp__shopify__get_repurchase_rates`, …) for when real agents run. Going live means swapping a server config.
+- `src/agent-turn.ts`: now accepts `mcpServers` / `allowedTools` (with `strictMcpConfig`) and emits
+  `tool.call` / `tool.result` for `mcp__*` tools. v1 behaviour is unchanged when they're not passed.
+- `src/v2/`: `intake.ts` (follow-up questions), `scoring.ts` (impact, score, sample size), `demo-run.ts` (the
+  scripted pipeline as a timed event stream), `web-corpus.ts` (illustrative research), `playback.ts`,
+  `standalone.ts` (single-file build), `types.ts` (Run Brief, ledger, audit, opportunity, plan, test contracts).
+- `src/events.ts`: new stages and events (`ledger.entry`, `audit.findings`, `priorities`, `plan.draft`, …);
+  `run.started` now carries the stage list so the page draws whatever the backend sends.
+- `src/server.ts`: `GET /api/store`, `POST /api/intake`, `POST /api/runs {runBrief, speed}`,
+  `POST /api/runs/:id/skip`, an optional `DEMO_PASSWORD` gate and a rate limit on starting runs.
+- `ui/index.html`: the V2 screens, trace renderers, `[d]`/`[c]` popovers and plan tabs, alongside v1.
+
+Not built yet (spec phases 3–5 with real agents): the V2 pipeline running live Claude agents against the MCP
+servers. The scripted run shows exactly what that pipeline emits.
+
+---
+
+## v1: the research crew
 
 A multi-agent system you can watch. Give it a brand's question and a crew of Claude agents researches it:
 three analysts in parallel (macro, consumer trends, competitors), an **assembly** pass that finds

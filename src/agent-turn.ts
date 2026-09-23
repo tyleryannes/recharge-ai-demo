@@ -4,9 +4,10 @@
  * whose structured output is validated before the pipeline trusts it.
  */
 
-import { query } from '@anthropic-ai/claude-agent-sdk';
+import { query, type McpServerConfig } from '@anthropic-ai/claude-agent-sdk';
 import type { z } from 'zod';
 import type { AgentDescriptor, RunBus, SourceRef } from './events.js';
+import type { SourceId } from './v2/types.js';
 import { jsonSchemaOf } from './schemas.js';
 
 export interface AgentTurnSpec<T> {
@@ -21,6 +22,10 @@ export interface AgentTurnSpec<T> {
   effort: 'low' | 'medium' | 'high';
   cwd: string;
   signal?: AbortSignal;
+  /** V2 store tools: in-process demo MCP servers today, real MCP configs later. */
+  mcpServers?: Record<string, McpServerConfig>;
+  /** e.g. ['mcp__shopify__get_repurchase_rates']; required for MCP tools to be callable. */
+  allowedTools?: string[];
 }
 
 /** Deltas are batched so a fast typist doesn't turn into thousands of SSE frames. */
@@ -65,8 +70,18 @@ export async function runAgentTurn<T>(bus: RunBus, spec: AgentTurnSpec<T>): Prom
       thinking: { type: 'adaptive', display: 'summarized' },
       abortController,
       outputFormat: { type: 'json_schema', schema: jsonSchemaOf(spec.schema) },
+      ...(spec.mcpServers
+        ? {
+            mcpServers: spec.mcpServers,
+            allowedTools: spec.allowedTools,
+            // Ignore MCP servers from the local Claude Code config: the SDK runs on the operator's login.
+            strictMcpConfig: true,
+          }
+        : {}),
     },
   });
+  // tool_use id -> the MCP call it was, so the matching result can be reported.
+  const mcpCalls = new Map<string, { source: SourceId; tool: string }>();
 
   const blocks = new Map<number, { kind: 'thinking' | 'text'; text: string }>();
   let pendingText = '';
@@ -130,6 +145,37 @@ export async function runAgentTurn<T>(bus: RunBus, spec: AgentTurnSpec<T>): Prom
           } else if (block.name === 'WebFetch' && typeof input.url === 'string') {
             flushText();
             bus.emit({ type: 'agent.fetch', agentId, url: input.url });
+          } else if (block.name.startsWith('mcp__')) {
+            // mcp__<source>__<tool>: a store tool. Shown as "Pulled … from <source>" in the trace.
+            const [, source, name] = block.name.split('__');
+            flushText();
+            mcpCalls.set(block.id, { source: source as SourceId, tool: `${source}.${name}` });
+            bus.emit({
+              type: 'tool.call',
+              agentId,
+              source: source as SourceId,
+              tool: `${source}.${name}`,
+              args: Object.fromEntries(Object.entries(input).map(([k, v]) => [k, String(v)])),
+              callId: block.id,
+            });
+          }
+        }
+      } else if (message.type === 'user' && Array.isArray(message.message.content)) {
+        for (const block of message.message.content) {
+          if (typeof block !== 'object' || block.type !== 'tool_result') continue;
+          const call = mcpCalls.get(block.tool_use_id);
+          if (!call) continue;
+          const text = Array.isArray(block.content)
+            ? block.content.map((c) => (c.type === 'text' ? c.text : '')).join('')
+            : String(block.content ?? '');
+          const ledgerIds = [...text.matchAll(/"id":"(d\d+)"/g)].map((m) => m[1]);
+          bus.emit({ type: 'tool.result', agentId, source: call.source, tool: call.tool, callId: block.tool_use_id, ledgerIds });
+        }
+        if (message.tool_use_result) {
+          const result = message.tool_use_result as SearchResultView;
+          if (typeof result.query === 'string' && Array.isArray(result.results)) {
+            const results = result.results.flatMap((r) => (typeof r === 'string' ? [] : r.content ?? []));
+            bus.emit({ type: 'agent.search.results', agentId, query: result.query, results });
           }
         }
       } else if (message.type === 'user' && message.tool_use_result) {
